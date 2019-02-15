@@ -1,7 +1,7 @@
 #!/bin/bash
 
 help() {
-	echo "Usage: project_analyze.sh [OPTIONS]"
+	echo "Usage: project_analyze.sh [OPTION]"
 	echo ""
 	echo "List of available options include:"
 	echo "	--todolog	Search all files in repo and output all lines containing \"#TODO\" to todo.log"
