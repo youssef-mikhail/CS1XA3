@@ -22,7 +22,6 @@ checkcompile() {
 	if [ -e compile_fail.log ] ; then
 		rm compile_fail.log
 	fi
-	touch compile_fail.log
 	find . -type f -iname "*.py" -print0 | while IFS= read -d $'\0' file
 	do
 		compilestatus="$(python -m py_compile $file 2>&1 1>/dev/null)"
@@ -31,6 +30,7 @@ checkcompile() {
 			echo "---------------------------------------------------" >> compile_fail.log
 			echo "$compilestatus" >> compile_fail.log
 			echo "---------------------------------------------------" >> compile_fail.log
+			echo "Found errors in $file. Errors recorded in compile_fail.log"
 		else
 			rm "$file"c
 		fi
@@ -43,11 +43,13 @@ checkcompile() {
 			echo "$file" >> compile_fail.log
 			echo "---------------------------------------------------" >> compile_fail.log
 			echo "$compilestatus" >> compile_fail.log
-			echo "$compilestatus"
 			echo "---------------------------------------------------" >> compile_fail.log
+			echo "Found errors in $file. Errors recorded in compile_fail.log"
 		fi
 	done
 	rm -rf tmp
+	echo ""
+	echo "All Haskell and Python files have been checked for errors"
 }
 
 cd ..
