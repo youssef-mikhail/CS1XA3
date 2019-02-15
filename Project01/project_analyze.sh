@@ -10,8 +10,8 @@ help() {
 }
 
 todo() {
-	if grep -r -s -q --exclude=todo.log "#TODO" . ; then
-		grep -r -n --exclude=todo.log "#TODO" . > todo.log
+	if grep -r -s -q --exclude={todo.log,project_analyze.sh} "#TODO" . ; then
+		grep -r -n --exclude={todo.log,project_analyze.sh} "#TODO" . > todo.log
 		echo "All TODOs have been outputted to todo.log"
 	else
 		echo "No TODOs found in repo"
