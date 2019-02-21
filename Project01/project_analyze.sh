@@ -77,8 +77,6 @@ searchKeyword() {
 #make a temporary backup of the file
 cp "$1" "$1".tmp
 
-#git checkout -b tmpbranch > /dev/null
-
 #get commit hashes
 hashes="$(git log --oneline | cut -d' ' -f1)"
 
@@ -97,10 +95,6 @@ for hash in $hashes ; do
 		break
 	fi
 done
-#git checkout @{-1} > /dev/null
-#git branch -d tmpbranch > /dev/null
-#git reset "$1" > /dev/null
-#git checkout "$1"
 mv "$1".tmp "$1"
 echo "Search complete"
 }
