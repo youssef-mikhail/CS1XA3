@@ -2,18 +2,18 @@
 
 help() {
 	if [ "$1" == "keyword" ] ; then
-		echo "--searchkeyword option requires a filename and keyword!"
+		echo "--search-file option requires a filename and keyword!"
 		echo ""
-		echo "Usage: project_analyze.sh --searchKeyword /path/to/file keywordToSearch"
+		echo "Usage: project_analyze.sh --search-file /path/to/file keywordToSearch"
 		exit 0
 	fi
 	echo "Usage: project_analyze.sh [OPTION]"
-	echo "or:	project_analyze.sh --searchkeyword /path/to/file keywordToSearch"
+	echo "or:	project_analyze.sh --search-file /path/to/file keywordToSearch"
 	echo ""
 	echo "List of available options include:"
-	echo "	--todolog	Search all files in repo and output all lines containing \"#TODO\" to todo.log"
-	echo "	--checkcompile	Search all Python and Haskell files in repo and output compile errors to compile_fail.log"
-	echo "	--searchkeyword	Search a single file's revision history for a specified keyword"
+	echo "	--todo-log	Search all files in repo and output all lines containing \"#TODO\" to todo.log"
+	echo "	--compile-check	Search all Python and Haskell files in repo and output compile errors to compile_fail.log"
+	echo "	--search-file	Search a single file's revision history for a specified keyword"
 	echo "	--help	Display this help"
 }
 
@@ -69,43 +69,51 @@ searchKeyword() {
 		echo ""
 		help "keyword"
 	fi
+	if [ ! -e "$1" ] ; then
+		echo "The file \"$1\" could not be found!"
+		exit 0
+	fi
 
 #make a temporary backup of the file
 cp "$1" "$1".tmp
 
-git checkout -b tmpbranch
+#git checkout -b tmpbranch > /dev/null
 
 #get commit hashes
 hashes="$(git log --oneline | cut -d' ' -f1)"
 
 for hash in $hashes ; do
-	git checkout "$hash" -- $1
-	if grep -s -n -q "$2" "$1" ; then
+	giterror="$(git checkout "$hash" -- "$1" 2>&1 1>/dev/null)"
+	if [ -n "$giterror" ] ; then
+			echo "File did not yet exist at commit $hash"
+		 	break
+	 fi
+	if grep -s -n -q -- "$2" "$1" ; then
 		echo "Found keyword in the following commit:"
-		commitmessage="$(git log --oneline) | grep $hash"
-		echo "$commitmessage"
-		echo "-----------------------------------------"
-		grep -s -n "$2" "$1"
+		git log --oneline | grep --color $hash
+		echo "---------------------------------------------------"
+		grep -s -n -T --color -- "$2" "$1"
+		echo "---------------------------------------------------"
 		break
 	fi
 done
-git checkout @{-1}
-git branch -d tmpbranch
-git reset "$1"
-git checkout "$1"
+#git checkout @{-1} > /dev/null
+#git branch -d tmpbranch > /dev/null
+#git reset "$1" > /dev/null
+#git checkout "$1"
 mv "$1".tmp "$1"
-
+echo "Search complete"
 }
 
-cd ..
+cd $(git rev-parse --show-toplevel)
 
-if [ "$1" == "--todolog" ] ; then
+if [ "$1" == "--todo-log" ] ; then
 	todo
 elif [ "$1" == "--help" ] ; then
 	help
-elif [ "$1" == "--checkcompile" ] ; then
+elif [ "$1" == "--compile-check" ] ; then
 	checkcompile
-elif [ "$1" == "--searchkeyword" ] ; then
+elif [ "$1" == "--search-file" ] ; then
 	searchKeyword $2 $3
 elif [ -n "$1" ] ; then
 	echo "$1 is not a valid argument!"
