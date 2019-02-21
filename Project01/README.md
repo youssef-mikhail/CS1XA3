@@ -39,6 +39,9 @@ errors to compile_fail.log. Any file with a compile error will
 have its name printed to this log, along with any error messages
 returned by the compiler.
 
+Please note that for Python files, only syntax errors at compile time will be recorded.
+Any runtime errors will not be recorded.
+
 ## File Keyword Search
 Usage: `project_analyze.sh --search-file path/to/file keywordToSearch`
 
