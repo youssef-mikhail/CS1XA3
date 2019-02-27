@@ -24,6 +24,19 @@ Command line argument  | Function
 Usage for the `--search-file` option is as follows:
   `project_analyze.sh --search-file path/to/file keywordToSearch`
 
+### Exit Statuses
+When the script is finished executing, it will exit with an exit status to indicate
+the nature of the completion of the script. The following are all the exit codes
+used in the script:
+
+exit code 0: script finished successfully
+exit code 1: Invalid arguments given
+exit code 2: No results found (by TODO log or keyword search)
+exit code 3: errors were found by the compile checker
+exit code -1: File not found
+exit code -2: Unknown git error
+
+
 ## TODO Log
 Usage: `project_analyze.sh --todo-log`
 

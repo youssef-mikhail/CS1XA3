@@ -46,7 +46,7 @@ checkcompile() {
 		compilestatus="$(python -m py_compile $file 2>&1 1>/dev/null)"
 		#if compilestatus is not empty, then there was an error. Output the file name along with the error
 		if [ -n "$compilestatus" ] ; then
-			export status=2
+			status=3
 			echo "$file" >> compile_fail.log
 			echo "---------------------------------------------------" >> compile_fail.log
 			echo "$compilestatus" >> compile_fail.log
@@ -63,7 +63,7 @@ checkcompile() {
 	do
 		compilestatus="$(ghc $file -ohi /dev/null -o /dev/null -c 2>&1 1>/dev/null)"
 		if [ -n "$compilestatus" ] ; then
-			status=2
+			status=3
 			echo "$file" >> compile_fail.log
 			echo "---------------------------------------------------" >> compile_fail.log
 			echo "$compilestatus" >> compile_fail.log
@@ -140,6 +140,9 @@ done
 #Restore the temporary file that was backed up before the search
 mv -f "$1".tmp "$1"
 echo "Search complete"
+if [ $status -eq 2 ] ; then
+	echo "No match found"
+fi
 exit $status
 }
 
