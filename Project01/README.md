@@ -29,12 +29,14 @@ When the script is finished executing, it will exit with an exit status to indic
 the nature of the completion of the script. The following are all the exit codes
 used in the script:
 
-exit code 0: script finished successfully
-exit code 1: Invalid arguments given
-exit code 2: No results found (by TODO log or keyword search)
-exit code 3: errors were found by the compile checker
-exit code -1: File not found
-exit code -2: Unknown git error
+Exit Code | Meaning
+----------|--------
+`0` | Script finished successfully
+`1` | Invalid arguments given
+`2` | No results found (by TODO log or keyword search)
+`3` | Errors were found by the compile checker
+`-1`  | File not found
+`-2`  | Unknown git error
 
 
 ## TODO Log
