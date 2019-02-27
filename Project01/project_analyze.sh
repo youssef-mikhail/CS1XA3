@@ -112,8 +112,7 @@ for hash in $hashes ; do
 	#	exit status 128: file is outside of repository
 	# Any other unknown, non-empty exit statuses are simply printed directly to stdout and the search is stopped. 
 	if [ $gitstatus -eq 1 ] ; then
-			echo "Reached end of file history at commit $hash"
-		 	break
+			 continue
 	elif [ $gitstatus -eq 128 ] ; then
 		echo "Error: file is outside of repository"
 		status=-1
