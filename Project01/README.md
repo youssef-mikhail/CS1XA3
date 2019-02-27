@@ -62,7 +62,7 @@ Usage: `project_analyze.sh --search-file path/to/file keywordToSearch`
 
 Searches a single file's revision history for a specified keyword.
 A copy of this file will be checked out from each past commit until
-either a match is found inside or the file stops existing at a specific commit.
+a match is found inside.
 
 A copy of the file is created before the search begins, so any uncommitted changes
 to the file will not be lost after the search.

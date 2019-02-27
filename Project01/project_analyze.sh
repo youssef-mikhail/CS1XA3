@@ -108,7 +108,7 @@ for hash in $hashes ; do
 	giterror="$(git checkout "$hash" -- "$1" 2>&1 1>/dev/null)"
 	gitstatus="$(echo $?)"
 	#Check exit status of the git checkout command and give an appropriate error message:
-	#	exit status 1: file not found by git
+	#	exit status 1: file not found by git. If this is the case, the file did not exist at this commit, skip this one and on to the next commit
 	#	exit status 128: file is outside of repository
 	# Any other unknown, non-empty exit statuses are simply printed directly to stdout and the search is stopped. 
 	if [ $gitstatus -eq 1 ] ; then
