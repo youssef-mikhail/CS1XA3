@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <script>
+        function changeString() {
+            string1 = document.getElementById("string1").value;
+            string2 = document.getElementById("string2").value;
+            document.getElementById("text").innerText = string1 + " : " + string2;
+        }
+    </script>
+
+<head>
+    <title>Lab 06</title>
+</head>
+<body>
+    <div><input placeholder="String 1" type="text" id="string1" oninput="changeString()"></input>
+        <input placeholder="String 2" type="text" id="string2" oninput="changeString()"></input>
+    </div>
+<div id="text">:</div>
+</body>
+</html>
