@@ -6055,7 +6055,17 @@ var author$project$Main$viewValidation = function (model) {
 				elm$html$Html$text('Passwords do not match!')
 			]));
 };
+var elm$core$Basics$neq = _Utils_notEqual;
 var elm$html$Html$button = _VirtualDom_node('button');
+var elm$json$Json$Encode$bool = _Json_wrap;
+var elm$html$Html$Attributes$boolProperty = F2(
+	function (key, bool) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			elm$json$Json$Encode$bool(bool));
+	});
+var elm$html$Html$Attributes$disabled = elm$html$Html$Attributes$boolProperty('disabled');
 var elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -6085,7 +6095,9 @@ var author$project$Main$view = function (model) {
 				elm$html$Html$button,
 				_List_fromArray(
 					[
-						elm$html$Html$Events$onClick(author$project$Main$CheckFields)
+						elm$html$Html$Events$onClick(author$project$Main$CheckFields),
+						elm$html$Html$Attributes$disabled(
+						!_Utils_eq(model.password, model.passwordAgain))
 					]),
 				_List_fromArray(
 					[

@@ -100,7 +100,7 @@ view model =
     [ viewInput "text" "Name" model.name Name
     , viewInput "password" "Password" model.password Password
     , viewInput "password" "Re-enter Password" model.passwordAgain PasswordAgain
-    , button [onClick CheckFields ] [text "Submit"]
+    , button [onClick CheckFields, disabled (model.password /= model.passwordAgain)] [text "Submit"]
     , viewValidation model
     , text (model.response)
     ]
