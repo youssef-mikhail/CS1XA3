@@ -20,4 +20,5 @@ root = 'e/mikhaily/'
 
 urlpatterns = [
     path(root, include("testreq.urls")),
+    path(root, include("lab7.urls")),
 ]

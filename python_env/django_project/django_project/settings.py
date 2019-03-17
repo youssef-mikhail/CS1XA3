@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'testreq.apps.TestreqConfig',
+    'lab7.apps.Lab7Config',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
