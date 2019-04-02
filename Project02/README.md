@@ -11,3 +11,10 @@ read over the backgrounds. The automatic scrolling to resume sections upon click
 using the JQuery Easing framework. A final adjustment was made to make the webpage more responsive to smaller screen sizes,
 which reduced the size of titles and subheadings to allow them to look better on smaller screens.
 
+## Part 3: Quick Click
+
+Quick Click is a simple game created using Elm and the GraphicSVG library made by MacCASOutreach. 
+
+The objective of the game is to click the targets which randomly appear at different locations on the screen before they disappear. Once a target appears, it will gradually get smaller, making it harder to click. As the player progresses through the game, the targets will shrink faster. Occassionally, a fake target will also spawn on the screen. It is indicated by a big red X in the middle of the target, and if clicked, the game will end. 
+
+A summary of the rules of the game are available on the main menu by clicking the "How to Play" button.
