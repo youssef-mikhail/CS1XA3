@@ -6,7 +6,7 @@ import json
 # Create your views here.
 
 def add_user(request):
-    userinfo = json.loads(request.body)
+    userinfo = request.POST
     uname = userinfo.get('username', '')
     passwd = userinfo.get('password', '')
 
@@ -19,7 +19,7 @@ def add_user(request):
         return HttpResponse('Success')
 
 def login_user(request):
-    credentials = json.loads(request.body)
+    credentials = request.POST 
     uname = credentials.get('username', '')
     passwd = credentials.get('password','')
 
