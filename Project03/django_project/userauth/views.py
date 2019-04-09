@@ -1,10 +1,13 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 import json
 
 # Create your views here.
 
+
+#TODO Check if username already exists
 def add_user(request):
     userinfo = request.POST
     uname = userinfo.get('username', '')
@@ -16,6 +19,7 @@ def add_user(request):
         return HttpResponse('Password cannot be empty!')
 
     else:
+        User.objects.create_user(username=uname, password=passwd)
         return HttpResponse('Success')
 
 def login_user(request):
@@ -39,4 +43,4 @@ def user_info(request):
     if not request.user.is_authenticated:
         return HttpResponse('Error: Not logged in')
     else:
-        return HttpResponse(request.user.first_name + request.user.last_name)
+        return HttpResponse(request.user.username)

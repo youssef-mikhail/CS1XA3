@@ -5903,12 +5903,20 @@ var author$project$Main$update = F2(
 			case 'GotText':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
-					var val = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{response: val}),
-						elm$core$Platform$Cmd$none);
+					if (result.a === 'LoginFailed') {
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{response: 'Your username or password is invalid'}),
+							elm$core$Platform$Cmd$none);
+					} else {
+						var val = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{response: val}),
+							elm$core$Platform$Cmd$none);
+					}
 				} else {
 					var error = result.a;
 					return _Utils_Tuple2(
@@ -5976,6 +5984,9 @@ var elm$html$Html$Attributes$stringProperty = F2(
 			elm$json$Json$Encode$string(string));
 	});
 var elm$html$Html$Attributes$placeholder = elm$html$Html$Attributes$stringProperty('placeholder');
+var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
+var elm$html$Html$Attributes$type_ = elm$html$Html$Attributes$stringProperty('type');
 var elm$html$Html$Attributes$value = elm$html$Html$Attributes$stringProperty('value');
 var elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
@@ -6055,7 +6066,8 @@ var author$project$Main$view = function (model) {
 					[
 						elm$html$Html$Attributes$placeholder('Password'),
 						elm$html$Html$Attributes$value(model.password),
-						elm$html$Html$Events$onInput(author$project$Main$PasswordEntered)
+						elm$html$Html$Events$onInput(author$project$Main$PasswordEntered),
+						elm$html$Html$Attributes$type_('password')
 					]),
 				_List_Nil),
 				A2(
@@ -6068,7 +6080,16 @@ var author$project$Main$view = function (model) {
 					[
 						elm$html$Html$text('Submit')
 					])),
-				elm$html$Html$text(model.response)
+				A2(
+				elm$html$Html$div,
+				_List_fromArray(
+					[
+						A2(elm$html$Html$Attributes$style, 'color', 'red')
+					]),
+				_List_fromArray(
+					[
+						elm$html$Html$text(model.response)
+					]))
 			]));
 };
 var elm$browser$Browser$External = function (a) {
