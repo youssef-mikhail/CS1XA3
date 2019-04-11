@@ -41,6 +41,6 @@ def logout_user(request):
 
 def user_info(request):
     if not request.user.is_authenticated:
-        return HttpResponse('Error: Not logged in')
+        return HttpResponse('NotLoggedIn')
     else:
         return HttpResponse(request.user.username)
