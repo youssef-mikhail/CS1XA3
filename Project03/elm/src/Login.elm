@@ -1,5 +1,6 @@
 module Main exposing (..)
 import Browser
+import Navigation exposing (newUrl)
 import Browser.Navigation exposing (load)
 import Html exposing (..)
 import Html.Attributes exposing (..)
@@ -57,7 +58,7 @@ update msg model =
                     ( {model | response = "Your username or password is invalid"}, Cmd.none)
 
                 Ok "LoggedIn" ->
-                    (model, load (rootURL ++ "static/main.html"))
+                    (model, newUrl (rootURL ++ "static/main.html"))
                 
                 Ok val ->
                     ( { model | response = val }, Cmd.none )

@@ -20,4 +20,5 @@ root = 'e/mikhaily/'
 
 urlpatterns = [
     path(root + 'userauth/', include('userauth.urls')),
+    path(root + 'game/', include('game.urls')),
 ]
