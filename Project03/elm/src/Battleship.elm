@@ -126,9 +126,9 @@ checkCollision ship ships = case ships of
 
 locationFromSquare : Float -> Int -> (Int, Int) -> (Float, Float)
 locationFromSquare orientation shipSize (a,b) = if orientation == 0 then 
-  (first gridLocation - squareWidth + toFloat a*squareWidth - 20, (squareWidth*10 + second gridLocation - toFloat b*squareWidth) - toFloat (shipSize//2)*30 + toFloat (remainderBy 2 (shipSize + 1))*15 )
+  (first gridLocation + toFloat a*squareWidth, (squareWidth*10 + second gridLocation - toFloat b*squareWidth) - toFloat (shipSize//2)*squareWidth + toFloat (remainderBy 2 (shipSize + 1))*(squareWidth/2) )
   else 
-  ((first gridLocation - squareWidth + toFloat a*squareWidth - 20) + toFloat (shipSize//2)*30 - toFloat (remainderBy 2 (shipSize + 1))*15, squareWidth*10 + second gridLocation - toFloat b*squareWidth )
+  ((first gridLocation + toFloat a*squareWidth) + toFloat (shipSize//2)*squareWidth - toFloat (remainderBy 2 (shipSize + 1))*(squareWidth/2), squareWidth*10 + second gridLocation - toFloat b*squareWidth )
 
 
 --TODO: Make sure ships do not overlap after rotating
@@ -167,8 +167,8 @@ view model =
 background = rectangle 700 500 |> filled lightBlue
 
 
-gridLocation = (-250.0, -150.0)
-squareWidth = 30.0
+gridLocation = (-300.0, -150.0)
+squareWidth = 30
 
 mainScreen model =  [
     background,
@@ -189,8 +189,8 @@ mainScreen model =  [
 --TODO: make dragging and dropping easier
 gameShip : Int -> Ship -> Shape Msg
 gameShip n ship = group [
-  rectangle 32 (toFloat (30*ship.size + 12)) |> filled blank,
-  oval 30 (toFloat (30*ship.size)) |> filled grey |> addOutline (solid 1) black   |> notifyTap (EditShip n)
+  rectangle (squareWidth + 2) (toFloat (squareWidth*ship.size + 12)) |> filled blank,
+  oval squareWidth (toFloat (squareWidth*ship.size)) |> filled grey |> addOutline (solid 1) black   |> notifyTap (EditShip n)
 
   ] |> rotate ship.orientation |> move (locationFromSquare ship.orientation ship.size ship.location)
 
@@ -209,7 +209,7 @@ squares row column = if column == 0 then
     squares (row - 1) 10
     else if row == 0 then []
     else
-    [square squareWidth |> filled blue |> addOutline (solid 2) black |> move ( 250.0 - (toFloat row)*squareWidth,(toFloat column)*squareWidth) |> notifyTap (SquareClicked (10 - row, 10 - column)) |> notifyEnter (SquareHovered (10 - row, 10 - column))] 
+    [square squareWidth |> filled blue |> addOutline (solid 2) black |> move (squareWidth*10 - (toFloat row)*squareWidth,(toFloat column)*squareWidth) |> notifyTap (SquareClicked (10 - row, 10 - column)) |> notifyEnter (SquareHovered (10 - row, 10 - column))] 
     ++ (squares row (column - 1))
 
 gameGrid = group (squares 10 10)
