@@ -10,3 +10,4 @@ def startgame(request):
     data = json.loads(request.body)
     print(data)
     return HttpResponse("Json received")
+
