@@ -51,7 +51,16 @@ type State =
    MovingShip Int
   | Idle
 
+shipToString : Ship -> String
+shipToString ship = String.fromInt (first ship.location) ++ String.fromInt (second ship.location)
+  ++ (if ship.orientation == 0 then "D" else "H")
 
+
+modelEncoder : Model -> JEncode.Value
+modelEncoder model =
+  JEncode.object [("ships", JEncode.list JEncode.string (List.map shipToString model.playerShips) )]
+
+{-
 modelEncoder : Model -> JEncode.Value
 modelEncoder model = 
   JEncode.object
@@ -77,6 +86,7 @@ modelEncoder model =
         ])
     ]
 
+-}
 
 
 sendBoard : Model -> Cmd Msg

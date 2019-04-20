@@ -1,27 +1,27 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 
 # Create your models here.
 
 class BattleshipSessionManager(models.Manager):
     def create_session(self, user, ships):
-        session = self.create(player1=user, player2="", currentTurn=user)
-        strShips = ""
-        #convert dictionary data for ships to comma separated string for database
-        for entry in ships:
-            strShips += str(ships[entry]["location"][0]) + str(ships[entry]["location"][1]) + ships[entry]["orientation"] + ","
-        strShips = strShips[:-1]
-        session.player1LiveShips = strShips
+        session = self.create(player1=user, 
+            player2=user, 
+            currentTurn=user,
+            player1LiveShips = ','.join(ships),
+            waitingForPlayer=True)
         return session
         
 
 class BattleshipSession(models.Model):
     #keep track of users in the current session
 
-    player1 = models.ForeignKey(User, on_delete=models.DO_NOTHING)
-    player2 = models.ForeignKey(User, on_delete=models.DO_NOTHING)
+    waitingForPlayer = models.BooleanField()
 
-    currentTurn = models.CharField(max_length=100)
+    player1 = models.ForeignKey(User, related_name="player1",on_delete=models.DO_NOTHING)
+    player2 = models.ForeignKey(User, related_name="player2",on_delete=models.DO_NOTHING)
+
+    currentTurn = models.ForeignKey(User,related_name="currentTurn", on_delete=models.DO_NOTHING)
 
     #Ships from both players that are still alive
     player1LiveShips = models.CharField(max_length=20)
@@ -44,6 +44,8 @@ class BattleshipSession(models.Model):
 
     objects = BattleshipSessionManager()
 
+    def __str__(self):
+        return self.player1.username + ' vs ' + self.player2.username
             
 
 

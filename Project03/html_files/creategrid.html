@@ -8982,7 +8982,13 @@ var author$project$Main$rotateShip = function (ship) {
 var author$project$Main$GotResponse = function (a) {
 	return {$: 'GotResponse', a: a};
 };
-var elm$json$Json$Encode$int = _Json_wrap;
+var author$project$Main$shipToString = function (ship) {
+	return _Utils_ap(
+		elm$core$String$fromInt(ship.location.a),
+		_Utils_ap(
+			elm$core$String$fromInt(ship.location.b),
+			(!ship.orientation) ? 'D' : 'H'));
+};
 var elm$json$Json$Encode$list = F2(
 	function (func, entries) {
 		return _Json_wrap(
@@ -9011,105 +9017,11 @@ var author$project$Main$modelEncoder = function (model) {
 		_List_fromArray(
 			[
 				_Utils_Tuple2(
-				'ship0',
-				elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							'location',
-							A2(
-								elm$json$Json$Encode$list,
-								elm$json$Json$Encode$int,
-								_List_fromArray(
-									[
-										A2(author$project$Main$getShipAt, 0, model.playerShips).location.a,
-										A2(author$project$Main$getShipAt, 0, model.playerShips).location.b
-									]))),
-							_Utils_Tuple2(
-							'orientation',
-							elm$json$Json$Encode$string(
-								(!A2(author$project$Main$getShipAt, 0, model.playerShips).orientation) ? 'D' : 'H'))
-						]))),
-				_Utils_Tuple2(
-				'ship1',
-				elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							'location',
-							A2(
-								elm$json$Json$Encode$list,
-								elm$json$Json$Encode$int,
-								_List_fromArray(
-									[
-										A2(author$project$Main$getShipAt, 1, model.playerShips).location.a,
-										A2(author$project$Main$getShipAt, 1, model.playerShips).location.b
-									]))),
-							_Utils_Tuple2(
-							'orientation',
-							elm$json$Json$Encode$string(
-								(!A2(author$project$Main$getShipAt, 1, model.playerShips).orientation) ? 'D' : 'H'))
-						]))),
-				_Utils_Tuple2(
-				'ship2',
-				elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							'location',
-							A2(
-								elm$json$Json$Encode$list,
-								elm$json$Json$Encode$int,
-								_List_fromArray(
-									[
-										A2(author$project$Main$getShipAt, 2, model.playerShips).location.a,
-										A2(author$project$Main$getShipAt, 2, model.playerShips).location.b
-									]))),
-							_Utils_Tuple2(
-							'orientation',
-							elm$json$Json$Encode$string(
-								(!A2(author$project$Main$getShipAt, 2, model.playerShips).orientation) ? 'D' : 'H'))
-						]))),
-				_Utils_Tuple2(
-				'ship3',
-				elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							'location',
-							A2(
-								elm$json$Json$Encode$list,
-								elm$json$Json$Encode$int,
-								_List_fromArray(
-									[
-										A2(author$project$Main$getShipAt, 3, model.playerShips).location.a,
-										A2(author$project$Main$getShipAt, 3, model.playerShips).location.b
-									]))),
-							_Utils_Tuple2(
-							'orientation',
-							elm$json$Json$Encode$string(
-								(!A2(author$project$Main$getShipAt, 3, model.playerShips).orientation) ? 'D' : 'H'))
-						]))),
-				_Utils_Tuple2(
-				'ship4',
-				elm$json$Json$Encode$object(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(
-							'location',
-							A2(
-								elm$json$Json$Encode$list,
-								elm$json$Json$Encode$int,
-								_List_fromArray(
-									[
-										A2(author$project$Main$getShipAt, 4, model.playerShips).location.a,
-										A2(author$project$Main$getShipAt, 4, model.playerShips).location.b
-									]))),
-							_Utils_Tuple2(
-							'orientation',
-							elm$json$Json$Encode$string(
-								(!A2(author$project$Main$getShipAt, 4, model.playerShips).orientation) ? 'D' : 'H'))
-						])))
+				'ships',
+				A2(
+					elm$json$Json$Encode$list,
+					elm$json$Json$Encode$string,
+					A2(elm$core$List$map, author$project$Main$shipToString, model.playerShips)))
 			]));
 };
 var author$project$Main$rootUrl = 'https://mac1xa3.ca/e/mikhaily/';
@@ -10438,7 +10350,7 @@ var author$project$Main$SquareClicked = function (a) {
 var author$project$Main$SquareHovered = function (a) {
 	return {$: 'SquareHovered', a: a};
 };
-var author$project$Main$squareWidth = 30.0;
+var author$project$Main$squareWidth = 30;
 var author$project$Main$squares = F2(
 	function (row, column) {
 		squares:
@@ -10466,7 +10378,7 @@ var author$project$Main$squares = F2(
 										_Utils_Tuple2(10 - row, 10 - column)),
 									A2(
 										MacCASOutreach$graphicsvg$GraphicSVG$move,
-										_Utils_Tuple2(250.0 - (row * author$project$Main$squareWidth), column * author$project$Main$squareWidth),
+										_Utils_Tuple2((author$project$Main$squareWidth * 10) - (row * author$project$Main$squareWidth), column * author$project$Main$squareWidth),
 										A3(
 											MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
 											MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
@@ -10499,12 +10411,12 @@ var MacCASOutreach$graphicsvg$GraphicSVG$rotate = F2(
 var author$project$Main$EditShip = function (a) {
 	return {$: 'EditShip', a: a};
 };
-var author$project$Main$gridLocation = _Utils_Tuple2(-250.0, -150.0);
+var author$project$Main$gridLocation = _Utils_Tuple2(-300.0, -150.0);
 var author$project$Main$locationFromSquare = F3(
 	function (orientation, shipSize, _n0) {
 		var a = _n0.a;
 		var b = _n0.b;
-		return (!orientation) ? _Utils_Tuple2(((author$project$Main$gridLocation.a - author$project$Main$squareWidth) + (a * author$project$Main$squareWidth)) - 20, ((((author$project$Main$squareWidth * 10) + author$project$Main$gridLocation.b) - (b * author$project$Main$squareWidth)) - (((shipSize / 2) | 0) * 30)) + (((shipSize + 1) % 2) * 15)) : _Utils_Tuple2(((((author$project$Main$gridLocation.a - author$project$Main$squareWidth) + (a * author$project$Main$squareWidth)) - 20) + (((shipSize / 2) | 0) * 30)) - (((shipSize + 1) % 2) * 15), ((author$project$Main$squareWidth * 10) + author$project$Main$gridLocation.b) - (b * author$project$Main$squareWidth));
+		return (!orientation) ? _Utils_Tuple2(author$project$Main$gridLocation.a + (a * author$project$Main$squareWidth), ((((author$project$Main$squareWidth * 10) + author$project$Main$gridLocation.b) - (b * author$project$Main$squareWidth)) - (((shipSize / 2) | 0) * author$project$Main$squareWidth)) + (((shipSize + 1) % 2) * (author$project$Main$squareWidth / 2))) : _Utils_Tuple2(((author$project$Main$gridLocation.a + (a * author$project$Main$squareWidth)) + (((shipSize / 2) | 0) * author$project$Main$squareWidth)) - (((shipSize + 1) % 2) * (author$project$Main$squareWidth / 2)), ((author$project$Main$squareWidth * 10) + author$project$Main$gridLocation.b) - (b * author$project$Main$squareWidth));
 	});
 var author$project$Main$gameShip = F2(
 	function (n, ship) {
@@ -10520,7 +10432,7 @@ var author$project$Main$gameShip = F2(
 							A2(
 							MacCASOutreach$graphicsvg$GraphicSVG$filled,
 							MacCASOutreach$graphicsvg$GraphicSVG$blank,
-							A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, 32, (30 * ship.size) + 12)),
+							A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, author$project$Main$squareWidth + 2, (author$project$Main$squareWidth * ship.size) + 12)),
 							A2(
 							MacCASOutreach$graphicsvg$GraphicSVG$notifyTap,
 							author$project$Main$EditShip(n),
@@ -10531,7 +10443,7 @@ var author$project$Main$gameShip = F2(
 								A2(
 									MacCASOutreach$graphicsvg$GraphicSVG$filled,
 									MacCASOutreach$graphicsvg$GraphicSVG$grey,
-									A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, 30, 30 * ship.size))))
+									A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, author$project$Main$squareWidth, author$project$Main$squareWidth * ship.size))))
 						]))));
 	});
 var author$project$Main$RotateShip = {$: 'RotateShip'};
