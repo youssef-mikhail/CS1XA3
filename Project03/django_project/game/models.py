@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User, AnonymousUser
+from django.db.models import Q
 
 # Create your models here.
 
@@ -12,6 +13,10 @@ class BattleshipSessionManager(models.Manager):
             waitingForPlayer=True)
         return session
         
+    def getSessionsForUser(self,user):
+        sessions = self.filter(Q(player1=user) | Q(player2=user) | Q(waitingForPlayer=True))
+        return sessions
+    
 
 class BattleshipSession(models.Model):
     #keep track of users in the current session
@@ -45,7 +50,10 @@ class BattleshipSession(models.Model):
     objects = BattleshipSessionManager()
 
     def __str__(self):
-        return self.player1.username + ' vs ' + self.player2.username
+        if not self.waitingForPlayer:
+            return self.player1.username + ' vs ' + self.player2.username
+        else:
+            return "Join game with " + self.player1.username
             
 
 
