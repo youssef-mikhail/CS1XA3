@@ -26,6 +26,7 @@ type Msg
  | RotateShip
  | SendGame
  | GotResponse (Result Http.Error String)
+ | GotJson (Result Http.Error String)
 
 
 
@@ -35,8 +36,26 @@ type alias Model =
           gameState : State,
           mouseLocation : (Float, Float),
           playerShips : List Ship,
-          response : String
+          response : String,
+          queries : String,
+          title : String,
+          opponentName : String
           }
+
+--Initial values for the app model
+init : () -> Url.Url -> Key -> ( Model, Cmd Msg )
+init flags url key = 
+  ( {currentClick = (0,0), 
+      playerShips = 
+        [Ship (0,0) 0 5, Ship (1,0) 0 4, Ship (2,0) 0 3, Ship (3,0) 0 3, Ship (4,0) 0 2],
+      gameState = Idle,
+      mouseLocation = (0,0),
+      response = "",
+      queries = Maybe.withDefault "" url.query,
+      title = "Place your ships in the desired arrangement",
+      opponentName = ""
+      }, getSessionInfo (Maybe.withDefault "" url.query))
+
 
 type alias Ship = 
   {
@@ -51,6 +70,10 @@ type State =
    MovingShip Int
   | Idle
 
+
+decodeSessionInfo : JDecode.Decoder String
+decodeSessionInfo = JDecode.field "opponentName" JDecode.string
+
 shipToString : Ship -> String
 shipToString ship = String.fromInt (first ship.location) ++ String.fromInt (second ship.location)
   ++ (if ship.orientation == 0 then "D" else "H")
@@ -60,43 +83,21 @@ modelEncoder : Model -> JEncode.Value
 modelEncoder model =
   JEncode.object [("ships", JEncode.list JEncode.string (List.map shipToString model.playerShips) )]
 
-{-
-modelEncoder : Model -> JEncode.Value
-modelEncoder model = 
-  JEncode.object
-    [("ship0", JEncode.object [
-        ("location", JEncode.list JEncode.int [first (getShipAt 0 model.playerShips).location, second (getShipAt 0 model.playerShips).location]),
-        ("orientation", JEncode.string (if (getShipAt 0 model.playerShips).orientation == 0 then "D" else "H"))
-        ]),
-    ("ship1", JEncode.object [
-        ("location", JEncode.list JEncode.int [first (getShipAt 1 model.playerShips).location, second (getShipAt 1 model.playerShips).location]),
-        ("orientation", JEncode.string (if (getShipAt 1 model.playerShips).orientation == 0 then "D" else "H"))
-        ]),
-    ("ship2", JEncode.object [
-        ("location", JEncode.list JEncode.int [first (getShipAt 2 model.playerShips).location, second (getShipAt 2 model.playerShips).location]),
-        ("orientation", JEncode.string (if (getShipAt 2 model.playerShips).orientation == 0 then "D" else "H"))
-        ]),
-    ("ship3", JEncode.object [
-        ("location", JEncode.list JEncode.int [first (getShipAt 3 model.playerShips).location, second (getShipAt 3 model.playerShips).location]),
-        ("orientation", JEncode.string (if (getShipAt 3 model.playerShips).orientation == 0 then "D" else "H"))
-        ]),
-    ("ship4", JEncode.object [
-        ("location", JEncode.list JEncode.int [first (getShipAt 4 model.playerShips).location, second (getShipAt 4 model.playerShips).location]),
-        ("orientation", JEncode.string (if (getShipAt 4 model.playerShips).orientation == 0 then "D" else "H"))
-        ])
-    ]
-
--}
-
 
 sendBoard : Model -> Cmd Msg
 sendBoard model = 
   Http.post {
-    url = rootUrl ++ "game/startgame/",
+    url = rootUrl ++ (if model.opponentName == "" then "game/startgame/" else "game/joingame/?" ++ model.queries),
     body = Http.jsonBody (modelEncoder model),
     expect = Http.expectString GotResponse 
   }
 
+getSessionInfo : String -> Cmd Msg
+getSessionInfo queries = 
+  Http.get {
+    url = rootUrl ++ "game/sessioninfo/?" ++ queries,
+    expect = Http.expectJson GotJson decodeSessionInfo
+  }
 
 getShipAt : Int -> List Ship -> Ship
 getShipAt n xs = case List.head (List.drop n xs) of 
@@ -152,16 +153,6 @@ rotateShip ship = if ship.orientation == 0 then
               location = if second ship.location > 10 - ship.size then (first ship.location, 10 - ship.size) else ship.location 
               }
 
---Initial values for the app model
-init : () -> Url.Url -> Key -> ( Model, Cmd Msg )
-init flags url key = 
-  ( {currentClick = (0,0), 
-      playerShips = 
-        [Ship (0,0) 0 5, Ship (1,0) 0 4, Ship (2,0) 0 3, Ship (3,0) 0 3, Ship (4,0) 0 2],
-      gameState = Idle,
-      mouseLocation = (0,0),
-      response = ""
-      }, Cmd.none)
 
 
 view : Model -> { title : String, body : Collage Msg }
@@ -182,7 +173,7 @@ squareWidth = 30
 
 mainScreen model =  [
     background,
-    text "Place your ships in the desired arrangement" |> size 30 |> bold |> filled black |> move (-325, 200),
+    text (if model.opponentName == "" then "Place your ships in the desired arrangement" else "Join game with " ++ model.opponentName) |> size 30 |> bold |> filled black |> move (-325, 200),
     text (if model.gameState == Idle then "Click on a ship to move it" else "Click on the square you would like to move your ship to") |> size 15 |> filled black |> move (0, 150),
     gameGrid |> move gridLocation |> notifyMouseMoveAt MouseMoved ,
     html 50 100 (rotateButton model) |> move (25,125),
@@ -192,7 +183,8 @@ mainScreen model =  [
     gameShip 2 (getShipAt 2 model.playerShips),
     gameShip 3 (getShipAt 3 model.playerShips),
     gameShip 4 (getShipAt 4 model.playerShips),
-    text model.response |> filled black
+    text model.response |> filled black,
+    text (Debug.toString model.queries) |> filled black |> move (0, -100)
     ]
 
 
@@ -280,6 +272,11 @@ update msg model = case msg of
       case result of 
         Ok val -> ({model | response = val}, Cmd.none)
         Err error -> (handleError model error, Cmd.none)
+      
+    GotJson result -> 
+      case result of 
+        Ok val -> ({model | opponentName = val}, Cmd.none)
+        Err error -> (handleError model error, Cmd.none)
 
 
 handleError model error = 
@@ -293,7 +290,7 @@ handleError model error =
         Http.BadStatus status ->
             {model | response = "Error: Bad status " ++ String.fromInt status}
         Http.BadBody body ->
-            {model | response = "Error: Bad body " ++ body}
+            {model | response = body}
 
 
 subscriptions : Model -> Sub Msg
