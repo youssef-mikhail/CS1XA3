@@ -4,6 +4,9 @@ from django.db.models import Q
 
 # Create your models here.
 
+class SessionFullException(Exception):
+    pass
+
 class BattleshipSessionManager(models.Manager):
     def create_session(self, user, ships):
         session = self.create(player1=user, 
@@ -13,6 +16,7 @@ class BattleshipSessionManager(models.Manager):
             waitingForPlayer=True)
         return session
         
+
     def getSessionsForUser(self,user):
         sessions = self.filter(Q(player1=user) | Q(player2=user) | Q(waitingForPlayer=True))
         return sessions
@@ -29,12 +33,12 @@ class BattleshipSession(models.Model):
     currentTurn = models.ForeignKey(User,related_name="currentTurn", on_delete=models.DO_NOTHING)
 
     #Ships from both players that are still alive
-    player1LiveShips = models.CharField(max_length=20)
-    player2LiveShips = models.CharField(max_length=20)
+    player1LiveShips = models.CharField(max_length=25)
+    player2LiveShips = models.CharField(max_length=25)
 
     #Ships from both players that have been sunk
-    player1SunkShips = models.CharField(max_length=20)
-    player2SunkShips = models.CharField(max_length=20)
+    player1SunkShips = models.CharField(max_length=25)
+    player2SunkShips = models.CharField(max_length=25)
 
     #Keep track of what missiles missed and hit from both players
     player1MissedMissiles = models.CharField(max_length=300)
@@ -49,6 +53,14 @@ class BattleshipSession(models.Model):
 
     objects = BattleshipSessionManager()
 
+    def add_player(self, user, ships):
+        if self.waitingForPlayer:
+            self.player2 = user
+            self.player2LiveShips = ",".join(ships)
+            self.waitingForPlayer = False
+        else:
+            raise SessionFullException("This session is not accepting new players")
+    
     def __str__(self):
         if not self.waitingForPlayer:
             return self.player1.username + ' vs ' + self.player2.username

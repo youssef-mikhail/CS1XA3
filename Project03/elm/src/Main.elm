@@ -67,6 +67,7 @@ view model =
     div [] ([
         h1 [] [text "Welcome to Battleship!"],
         a [href "https://mac1xa3.ca/e/mikhaily/userauth/logoutuser/"] [text "Log out"],
+        div [] [a [href "creategrid.html"] [text "Create new game"]],
         h2 [] [text ("Available sessions for " ++ model.currentUser ++ ":")]
      ] ++ sessionList model.sessionUrls model.sessionDescriptions)
      else 

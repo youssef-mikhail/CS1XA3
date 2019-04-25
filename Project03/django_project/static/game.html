@@ -8749,16 +8749,104 @@ var author$project$Main$Tick = F2(
 var author$project$Main$UrlChange = function (a) {
 	return {$: 'UrlChange', a: a};
 };
-var author$project$Main$Idle = {$: 'Idle'};
+var author$project$Main$GameData = F7(
+	function (playerShips, opponentSunkShips, playerMissedMissiles, playerHitMissiles, opponentHitMissiles, opponentMissedMissiles, isPlayerTurn) {
+		return {isPlayerTurn: isPlayerTurn, opponentHitMissiles: opponentHitMissiles, opponentMissedMissiles: opponentMissedMissiles, opponentSunkShips: opponentSunkShips, playerHitMissiles: playerHitMissiles, playerMissedMissiles: playerMissedMissiles, playerShips: playerShips};
+	});
 var author$project$Main$Ship = F3(
 	function (location, orientation, size) {
 		return {location: location, orientation: orientation, size: size};
 	});
-var author$project$Main$GotJson = function (a) {
-	return {$: 'GotJson', a: a};
+var author$project$Main$WaitingTurn = {$: 'WaitingTurn'};
+var author$project$Main$GotGameData = function (a) {
+	return {$: 'GotGameData', a: a};
 };
+var elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var elm$core$String$dropRight = F2(
+	function (n, string) {
+		return (n < 1) ? string : A3(elm$core$String$slice, 0, -n, string);
+	});
+var author$project$Main$stringToMissile = function (strMissile) {
+	return _Utils_Tuple2(
+		A2(
+			elm$core$Maybe$withDefault,
+			0,
+			elm$core$String$toInt(
+				A2(elm$core$String$dropRight, 1, strMissile))),
+		A2(
+			elm$core$Maybe$withDefault,
+			0,
+			elm$core$String$toInt(
+				A2(elm$core$String$dropLeft, 1, strMissile))));
+};
+var elm$core$Basics$pi = _Basics_pi;
+var author$project$Main$stringToShip = function (strShip) {
+	return A3(
+		author$project$Main$Ship,
+		_Utils_Tuple2(
+			A2(
+				elm$core$Maybe$withDefault,
+				0,
+				elm$core$String$toInt(
+					A2(elm$core$String$dropRight, 3, strShip))),
+			A2(
+				elm$core$Maybe$withDefault,
+				0,
+				elm$core$String$toInt(
+					A3(elm$core$String$slice, 1, 2, strShip)))),
+		(A3(elm$core$String$slice, 2, 3, strShip) === 'D') ? 0 : (elm$core$Basics$pi / 2),
+		A2(
+			elm$core$Maybe$withDefault,
+			0,
+			elm$core$String$toInt(
+				A2(elm$core$String$dropLeft, 3, strShip))));
+};
+var elm$json$Json$Decode$bool = _Json_decodeBool;
+var elm$json$Json$Decode$list = _Json_decodeList;
+var elm$json$Json$Decode$map7 = _Json_map7;
 var elm$json$Json$Decode$string = _Json_decodeString;
-var author$project$Main$decodeSessionInfo = A2(elm$json$Json$Decode$field, 'opponentName', elm$json$Json$Decode$string);
+var author$project$Main$decodeGameData = A8(
+	elm$json$Json$Decode$map7,
+	author$project$Main$GameData,
+	A2(
+		elm$json$Json$Decode$field,
+		'playerShips',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToShip, elm$json$Json$Decode$string))),
+	A2(
+		elm$json$Json$Decode$field,
+		'opponentSunkShips',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToShip, elm$json$Json$Decode$string))),
+	A2(
+		elm$json$Json$Decode$field,
+		'playerMissedMissiles',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToMissile, elm$json$Json$Decode$string))),
+	A2(
+		elm$json$Json$Decode$field,
+		'playerHitMissiles',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToMissile, elm$json$Json$Decode$string))),
+	A2(
+		elm$json$Json$Decode$field,
+		'opponentHitMissiles',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToMissile, elm$json$Json$Decode$string))),
+	A2(
+		elm$json$Json$Decode$field,
+		'opponentMissedMissiles',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToMissile, elm$json$Json$Decode$string))),
+	A2(elm$json$Json$Decode$field, 'isPlayerTurn', elm$json$Json$Decode$bool));
 var author$project$Main$rootUrl = 'https://mac1xa3.ca/e/mikhaily/';
 var elm$core$Result$mapError = F2(
 	function (f, result) {
@@ -9395,214 +9483,83 @@ var elm$http$Http$get = function (r) {
 	return elm$http$Http$request(
 		{body: elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: elm$core$Maybe$Nothing, tracker: elm$core$Maybe$Nothing, url: r.url});
 };
-var author$project$Main$getSessionInfo = function (queries) {
+var author$project$Main$getGameState = function (queries) {
 	return elm$http$Http$get(
 		{
-			expect: A2(elm$http$Http$expectJson, author$project$Main$GotJson, author$project$Main$decodeSessionInfo),
-			url: author$project$Main$rootUrl + ('game/sessioninfo/?' + queries)
+			expect: A2(elm$http$Http$expectJson, author$project$Main$GotGameData, author$project$Main$decodeGameData),
+			url: author$project$Main$rootUrl + ('game/refreshgame/?' + queries)
 		});
 };
-var elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
+var author$project$Main$GotSessionInfo = function (a) {
+	return {$: 'GotSessionInfo', a: a};
+};
+var author$project$Main$sessionInfoDecoder = A2(elm$json$Json$Decode$field, 'sessionDescription', elm$json$Json$Decode$string);
+var author$project$Main$getSessionData = function (query) {
+	return elm$http$Http$get(
+		{
+			expect: A2(elm$http$Http$expectJson, author$project$Main$GotSessionInfo, author$project$Main$sessionInfoDecoder),
+			url: author$project$Main$rootUrl + ('game/sessioninfo/?' + query)
+		});
+};
 var author$project$Main$init = F3(
 	function (flags, url, key) {
 		return _Utils_Tuple2(
 			{
-				currentClick: _Utils_Tuple2(0, 0),
-				gameState: author$project$Main$Idle,
-				mouseLocation: _Utils_Tuple2(0, 0),
-				opponentName: '',
-				playerShips: _List_fromArray(
-					[
-						A3(
-						author$project$Main$Ship,
-						_Utils_Tuple2(0, 0),
-						0,
-						5),
-						A3(
-						author$project$Main$Ship,
-						_Utils_Tuple2(1, 0),
-						0,
-						4),
-						A3(
-						author$project$Main$Ship,
-						_Utils_Tuple2(2, 0),
-						0,
-						3),
-						A3(
-						author$project$Main$Ship,
-						_Utils_Tuple2(3, 0),
-						0,
-						3),
-						A3(
-						author$project$Main$Ship,
-						_Utils_Tuple2(4, 0),
-						0,
-						2)
-					]),
+				gameData: A7(
+					author$project$Main$GameData,
+					_List_fromArray(
+						[
+							A3(
+							author$project$Main$Ship,
+							_Utils_Tuple2(0, 0),
+							0.0,
+							0)
+						]),
+					_List_fromArray(
+						[
+							A3(
+							author$project$Main$Ship,
+							_Utils_Tuple2(0, 0),
+							0.0,
+							0)
+						]),
+					_List_fromArray(
+						[
+							_Utils_Tuple2(0, 0)
+						]),
+					_List_fromArray(
+						[
+							_Utils_Tuple2(0, 0)
+						]),
+					_List_fromArray(
+						[
+							_Utils_Tuple2(0, 0)
+						]),
+					_List_fromArray(
+						[
+							_Utils_Tuple2(0, 0)
+						]),
+					false),
+				gameState: author$project$Main$WaitingTurn,
 				queries: A2(elm$core$Maybe$withDefault, '', url.query),
 				response: '',
-				title: 'Place your ships in the desired arrangement'
+				sessionDescription: '',
+				targetLocation: _Utils_Tuple2(0, 0)
 			},
-			function () {
-				var _n0 = url.query;
-				if (_n0.$ === 'Nothing') {
-					return elm$core$Platform$Cmd$none;
-				} else {
-					var a = _n0.a;
-					return author$project$Main$getSessionInfo(a);
-				}
-			}());
+			elm$core$Platform$Cmd$batch(
+				_List_fromArray(
+					[
+						author$project$Main$getGameState(
+						A2(elm$core$Maybe$withDefault, '', url.query)),
+						author$project$Main$getSessionData(
+						A2(elm$core$Maybe$withDefault, '', url.query))
+					])));
 	});
 var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 var author$project$Main$subscriptions = function (model) {
 	return elm$core$Platform$Sub$none;
 };
-var author$project$Main$MovingShip = function (a) {
-	return {$: 'MovingShip', a: a};
-};
-var author$project$Main$changeShipLocation = F2(
-	function (ship, newLocation) {
-		return _Utils_update(
-			ship,
-			{location: newLocation});
-	});
-var elm$core$List$member = F2(
-	function (x, xs) {
-		return A2(
-			elm$core$List$any,
-			function (a) {
-				return _Utils_eq(a, x);
-			},
-			xs);
-	});
-var author$project$Main$checkOverlap = F2(
-	function (a, b) {
-		if (!a.b) {
-			return false;
-		} else {
-			var x = a.a;
-			var xs = a.b;
-			return A2(elm$core$List$member, x, b) || A2(author$project$Main$checkOverlap, xs, b);
-		}
-	});
-var author$project$Main$zip = F2(
-	function (a, b) {
-		if (!a.b) {
-			return _List_Nil;
-		} else {
-			var x = a.a;
-			var xs = a.b;
-			if (!b.b) {
-				return _List_Nil;
-			} else {
-				var y = b.a;
-				var ys = b.b;
-				return _Utils_ap(
-					_List_fromArray(
-						[
-							_Utils_Tuple2(x, y)
-						]),
-					A2(author$project$Main$zip, xs, ys));
-			}
-		}
-	});
-var elm$core$List$repeatHelp = F3(
-	function (result, n, value) {
-		repeatHelp:
-		while (true) {
-			if (n <= 0) {
-				return result;
-			} else {
-				var $temp$result = A2(elm$core$List$cons, value, result),
-					$temp$n = n - 1,
-					$temp$value = value;
-				result = $temp$result;
-				n = $temp$n;
-				value = $temp$value;
-				continue repeatHelp;
-			}
-		}
-	});
-var elm$core$List$repeat = F2(
-	function (n, value) {
-		return A3(elm$core$List$repeatHelp, _List_Nil, n, value);
-	});
-var author$project$Main$locationsForShip = function (ship) {
-	return (!ship.orientation) ? A2(
-		author$project$Main$zip,
-		A2(elm$core$List$repeat, ship.size, ship.location.a),
-		A2(elm$core$List$range, ship.location.b, ship.location.b + ship.size)) : A2(
-		author$project$Main$zip,
-		A2(elm$core$List$range, ship.location.a, ship.location.a + ship.size),
-		A2(elm$core$List$repeat, ship.size, ship.location.b));
-};
-var elm$core$Basics$neq = _Utils_notEqual;
-var author$project$Main$checkCollision = F2(
-	function (ship, ships) {
-		if (!ships.b) {
-			return false;
-		} else {
-			var a = ships.a;
-			var b = ships.b;
-			return (A2(
-				author$project$Main$checkOverlap,
-				author$project$Main$locationsForShip(ship),
-				author$project$Main$locationsForShip(a)) && (!_Utils_eq(ship.location, a.location))) || A2(author$project$Main$checkCollision, ship, b);
-		}
-	});
-var elm$core$List$drop = F2(
-	function (n, list) {
-		drop:
-		while (true) {
-			if (n <= 0) {
-				return list;
-			} else {
-				if (!list.b) {
-					return list;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs;
-					n = $temp$n;
-					list = $temp$list;
-					continue drop;
-				}
-			}
-		}
-	});
-var elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return elm$core$Maybe$Just(x);
-	} else {
-		return elm$core$Maybe$Nothing;
-	}
-};
-var author$project$Main$getShipAt = F2(
-	function (n, xs) {
-		var _n0 = elm$core$List$head(
-			A2(elm$core$List$drop, n, xs));
-		if (_n0.$ === 'Just') {
-			var a = _n0.a;
-			return a;
-		} else {
-			return A3(
-				author$project$Main$Ship,
-				_Utils_Tuple2(0, 0),
-				0,
-				0);
-		}
-	});
+var author$project$Main$Idle = {$: 'Idle'};
 var author$project$Main$handleError = F2(
 	function (model, error) {
 		switch (error.$) {
@@ -9630,218 +9587,8 @@ var author$project$Main$handleError = F2(
 				var body = error.a;
 				return _Utils_update(
 					model,
-					{response: 'Bad body ' + body});
+					{response: 'Error: Bad body ' + body});
 		}
-	});
-var elm$core$Basics$pi = _Basics_pi;
-var author$project$Main$rotateShip = function (ship) {
-	return (!ship.orientation) ? _Utils_update(
-		ship,
-		{
-			location: (_Utils_cmp(ship.location.a, 10 - ship.size) > 0) ? _Utils_Tuple2(10 - ship.size, ship.location.b) : ship.location,
-			orientation: elm$core$Basics$pi / 2
-		}) : _Utils_update(
-		ship,
-		{
-			location: (_Utils_cmp(ship.location.b, 10 - ship.size) > 0) ? _Utils_Tuple2(ship.location.a, 10 - ship.size) : ship.location,
-			orientation: 0
-		});
-};
-var author$project$Main$GotSessionID = function (a) {
-	return {$: 'GotSessionID', a: a};
-};
-var author$project$Main$shipToString = function (ship) {
-	return _Utils_ap(
-		elm$core$String$fromInt(ship.location.a),
-		_Utils_ap(
-			elm$core$String$fromInt(ship.location.b),
-			_Utils_ap(
-				(!ship.orientation) ? 'D' : 'H',
-				elm$core$String$fromInt(ship.size))));
-};
-var elm$json$Json$Encode$list = F2(
-	function (func, entries) {
-		return _Json_wrap(
-			A3(
-				elm$core$List$foldl,
-				_Json_addEntry(func),
-				_Json_emptyArray(_Utils_Tuple0),
-				entries));
-	});
-var elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			elm$core$List$foldl,
-			F2(
-				function (_n0, obj) {
-					var k = _n0.a;
-					var v = _n0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
-var elm$json$Json$Encode$string = _Json_wrap;
-var author$project$Main$modelEncoder = function (model) {
-	return elm$json$Json$Encode$object(
-		_List_fromArray(
-			[
-				_Utils_Tuple2(
-				'ships',
-				A2(
-					elm$json$Json$Encode$list,
-					elm$json$Json$Encode$string,
-					A2(elm$core$List$map, author$project$Main$shipToString, model.playerShips)))
-			]));
-};
-var author$project$Main$sessionIDDecoder = A2(elm$json$Json$Decode$field, 'gameid', elm$json$Json$Decode$int);
-var elm$http$Http$jsonBody = function (value) {
-	return A2(
-		_Http_pair,
-		'application/json',
-		A2(elm$json$Json$Encode$encode, 0, value));
-};
-var elm$http$Http$post = function (r) {
-	return elm$http$Http$request(
-		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: elm$core$Maybe$Nothing, tracker: elm$core$Maybe$Nothing, url: r.url});
-};
-var author$project$Main$sendBoard = function (model) {
-	return elm$http$Http$post(
-		{
-			body: elm$http$Http$jsonBody(
-				author$project$Main$modelEncoder(model)),
-			expect: A2(elm$http$Http$expectJson, author$project$Main$GotSessionID, author$project$Main$sessionIDDecoder),
-			url: _Utils_ap(
-				author$project$Main$rootUrl,
-				(model.opponentName === '') ? 'game/startgame/' : ('game/joingame/?' + model.queries))
-		});
-};
-var elm$browser$Browser$Navigation$load = _Browser_load;
-var elm$core$List$takeReverse = F3(
-	function (n, list, kept) {
-		takeReverse:
-		while (true) {
-			if (n <= 0) {
-				return kept;
-			} else {
-				if (!list.b) {
-					return kept;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs,
-						$temp$kept = A2(elm$core$List$cons, x, kept);
-					n = $temp$n;
-					list = $temp$list;
-					kept = $temp$kept;
-					continue takeReverse;
-				}
-			}
-		}
-	});
-var elm$core$List$takeTailRec = F2(
-	function (n, list) {
-		return elm$core$List$reverse(
-			A3(elm$core$List$takeReverse, n, list, _List_Nil));
-	});
-var elm$core$List$takeFast = F3(
-	function (ctr, n, list) {
-		if (n <= 0) {
-			return _List_Nil;
-		} else {
-			var _n0 = _Utils_Tuple2(n, list);
-			_n0$1:
-			while (true) {
-				_n0$5:
-				while (true) {
-					if (!_n0.b.b) {
-						return list;
-					} else {
-						if (_n0.b.b.b) {
-							switch (_n0.a) {
-								case 1:
-									break _n0$1;
-								case 2:
-									var _n2 = _n0.b;
-									var x = _n2.a;
-									var _n3 = _n2.b;
-									var y = _n3.a;
-									return _List_fromArray(
-										[x, y]);
-								case 3:
-									if (_n0.b.b.b.b) {
-										var _n4 = _n0.b;
-										var x = _n4.a;
-										var _n5 = _n4.b;
-										var y = _n5.a;
-										var _n6 = _n5.b;
-										var z = _n6.a;
-										return _List_fromArray(
-											[x, y, z]);
-									} else {
-										break _n0$5;
-									}
-								default:
-									if (_n0.b.b.b.b && _n0.b.b.b.b.b) {
-										var _n7 = _n0.b;
-										var x = _n7.a;
-										var _n8 = _n7.b;
-										var y = _n8.a;
-										var _n9 = _n8.b;
-										var z = _n9.a;
-										var _n10 = _n9.b;
-										var w = _n10.a;
-										var tl = _n10.b;
-										return (ctr > 1000) ? A2(
-											elm$core$List$cons,
-											x,
-											A2(
-												elm$core$List$cons,
-												y,
-												A2(
-													elm$core$List$cons,
-													z,
-													A2(
-														elm$core$List$cons,
-														w,
-														A2(elm$core$List$takeTailRec, n - 4, tl))))) : A2(
-											elm$core$List$cons,
-											x,
-											A2(
-												elm$core$List$cons,
-												y,
-												A2(
-													elm$core$List$cons,
-													z,
-													A2(
-														elm$core$List$cons,
-														w,
-														A3(elm$core$List$takeFast, ctr + 1, n - 4, tl)))));
-									} else {
-										break _n0$5;
-									}
-							}
-						} else {
-							if (_n0.a === 1) {
-								break _n0$1;
-							} else {
-								break _n0$5;
-							}
-						}
-					}
-				}
-				return list;
-			}
-			var _n1 = _n0.b;
-			var x = _n1.a;
-			return _List_fromArray(
-				[x]);
-		}
-	});
-var elm$core$List$take = F2(
-	function (n, list) {
-		return A3(elm$core$List$takeFast, 0, n, list);
 	});
 var author$project$Main$update = F2(
 	function (msg, model) {
@@ -9849,17 +9596,7 @@ var author$project$Main$update = F2(
 			case 'Tick':
 				var time = msg.a;
 				var getKeyState = msg.b;
-				return _Utils_Tuple2(
-					function () {
-						var _n1 = model.gameState;
-						if (_n1.$ === 'Idle') {
-							return model;
-						} else {
-							var ship = _n1.a;
-							return model;
-						}
-					}(),
-					elm$core$Platform$Cmd$none);
+				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 			case 'MakeRequest':
 				var urlRequest = msg.a;
 				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
@@ -9871,127 +9608,27 @@ var author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{currentClick: location}),
+						{gameState: author$project$Main$Idle, targetLocation: location}),
 					elm$core$Platform$Cmd$none);
 			case 'SquareHovered':
 				var location = msg.a;
 				return _Utils_Tuple2(
 					function () {
-						var _n2 = model.gameState;
-						if (_n2.$ === 'Idle') {
-							return model;
-						} else {
-							var ship = _n2.a;
-							return _Utils_update(
-								model,
-								{
-									playerShips: function () {
-										var newShip = (!A2(
-											author$project$Main$checkCollision,
-											A2(
-												author$project$Main$changeShipLocation,
-												A2(author$project$Main$getShipAt, ship, model.playerShips),
-												location),
-											_Utils_ap(
-												A2(elm$core$List$take, ship, model.playerShips),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)))) ? (((!A2(author$project$Main$getShipAt, ship, model.playerShips).orientation) && ((_Utils_cmp(
-											location.b,
-											10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size) > 0) && (!A2(
-											author$project$Main$checkCollision,
-											A2(
-												author$project$Main$changeShipLocation,
-												A2(author$project$Main$getShipAt, ship, model.playerShips),
-												location),
-											_Utils_ap(
-												A2(elm$core$List$take, ship, model.playerShips),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)))))) ? A2(
-											author$project$Main$changeShipLocation,
-											A2(author$project$Main$getShipAt, ship, model.playerShips),
-											_Utils_Tuple2(
-												location.a,
-												10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size)) : ((A2(author$project$Main$getShipAt, ship, model.playerShips).orientation && ((_Utils_cmp(
-											location.a,
-											10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size) > 0) && (!A2(
-											author$project$Main$checkCollision,
-											A2(
-												author$project$Main$changeShipLocation,
-												A2(author$project$Main$getShipAt, ship, model.playerShips),
-												location),
-											_Utils_ap(
-												A2(elm$core$List$take, ship, model.playerShips),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)))))) ? A2(
-											author$project$Main$changeShipLocation,
-											A2(author$project$Main$getShipAt, ship, model.playerShips),
-											_Utils_Tuple2(
-												10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size,
-												location.b)) : A2(
-											author$project$Main$changeShipLocation,
-											A2(author$project$Main$getShipAt, ship, model.playerShips),
-											location))) : A2(author$project$Main$getShipAt, ship, model.playerShips);
-										return _Utils_ap(
-											A2(elm$core$List$take, ship, model.playerShips),
-											_Utils_ap(
-												_List_fromArray(
-													[newShip]),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)));
-									}()
-								});
-						}
-					}(),
-					elm$core$Platform$Cmd$none);
-			case 'MouseMoved':
-				var location = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{mouseLocation: location}),
-					elm$core$Platform$Cmd$none);
-			case 'EditShip':
-				var ship = msg.a;
-				return _Utils_Tuple2(
-					function () {
-						var _n3 = model.gameState;
-						if (_n3.$ === 'Idle') {
-							return _Utils_update(
-								model,
-								{
-									gameState: author$project$Main$MovingShip(ship)
-								});
-						} else {
-							return _Utils_update(
-								model,
-								{gameState: author$project$Main$Idle});
-						}
-					}(),
-					elm$core$Platform$Cmd$none);
-			case 'RotateShip':
-				return _Utils_Tuple2(
-					function () {
-						var _n4 = model.gameState;
-						if (_n4.$ === 'Idle') {
-							return model;
-						} else {
-							var ship = _n4.a;
-							return _Utils_update(
-								model,
-								{
-									playerShips: _Utils_ap(
-										A2(elm$core$List$take, ship, model.playerShips),
-										_Utils_ap(
-											_List_fromArray(
-												[
-													author$project$Main$rotateShip(
-													A2(author$project$Main$getShipAt, ship, model.playerShips))
-												]),
-											A2(elm$core$List$drop, ship + 1, model.playerShips)))
-								});
+						var _n1 = model.gameState;
+						switch (_n1.$) {
+							case 'Idle':
+								return model;
+							case 'MovingTarget':
+								return _Utils_update(
+									model,
+									{targetLocation: location});
+							default:
+								return model;
 						}
 					}(),
 					elm$core$Platform$Cmd$none);
 			case 'SendGame':
-				return _Utils_Tuple2(
-					model,
-					author$project$Main$sendBoard(model));
+				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 			case 'GotResponse':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
@@ -10007,14 +9644,15 @@ var author$project$Main$update = F2(
 						A2(author$project$Main$handleError, model, error),
 						elm$core$Platform$Cmd$none);
 				}
-			case 'GotSessionID':
+			case 'GotGameData':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
-					var val = result.a;
+					var data = result.a;
 					return _Utils_Tuple2(
-						model,
-						elm$browser$Browser$Navigation$load(
-							author$project$Main$rootUrl + ('static/game.html?gameid=' + elm$core$String$fromInt(val))));
+						_Utils_update(
+							model,
+							{gameData: data}),
+						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
 					return _Utils_Tuple2(
@@ -10024,11 +9662,11 @@ var author$project$Main$update = F2(
 			default:
 				var result = msg.a;
 				if (result.$ === 'Ok') {
-					var val = result.a;
+					var info = result.a;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{opponentName: val}),
+							{sessionDescription: info}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
@@ -10075,10 +9713,6 @@ var MacCASOutreach$graphicsvg$GraphicSVG$html = F3(
 	function (w, h, htm) {
 		return A3(MacCASOutreach$graphicsvg$GraphicSVG$ForeignObject, w, h, htm);
 	});
-var MacCASOutreach$graphicsvg$GraphicSVG$notifyMouseMoveAt = F2(
-	function (msg, shape) {
-		return A2(MacCASOutreach$graphicsvg$GraphicSVG$MoveOverAt, msg, shape);
-	});
 var MacCASOutreach$graphicsvg$GraphicSVG$size = F2(
 	function (sze, stencil) {
 		if (stencil.$ === 'Text') {
@@ -10108,9 +9742,6 @@ var MacCASOutreach$graphicsvg$GraphicSVG$text = function (str) {
 		MacCASOutreach$graphicsvg$GraphicSVG$Text,
 		A8(MacCASOutreach$graphicsvg$GraphicSVG$Face, 12, false, false, false, false, false, MacCASOutreach$graphicsvg$GraphicSVG$Serif, MacCASOutreach$graphicsvg$GraphicSVG$AlignLeft),
 		str);
-};
-var author$project$Main$MouseMoved = function (a) {
-	return {$: 'MouseMoved', a: a};
 };
 var MacCASOutreach$graphicsvg$GraphicSVG$lightBlue = A4(MacCASOutreach$graphicsvg$GraphicSVG$RGBA, 114, 159, 207, 1);
 var MacCASOutreach$graphicsvg$GraphicSVG$rectangle = F2(
@@ -10447,16 +10078,16 @@ var author$project$Main$SquareHovered = function (a) {
 	return {$: 'SquareHovered', a: a};
 };
 var author$project$Main$squareWidth = 30;
-var author$project$Main$squares = F2(
+var author$project$Main$squaresWithClickMsg = F2(
 	function (row, column) {
-		squares:
+		squaresWithClickMsg:
 		while (true) {
 			if (!column) {
 				var $temp$row = row - 1,
 					$temp$column = 10;
 				row = $temp$row;
 				column = $temp$column;
-				continue squares;
+				continue squaresWithClickMsg;
 			} else {
 				if (!row) {
 					return _List_Nil;
@@ -10484,12 +10115,56 @@ var author$project$Main$squares = F2(
 												MacCASOutreach$graphicsvg$GraphicSVG$blue,
 												MacCASOutreach$graphicsvg$GraphicSVG$square(author$project$Main$squareWidth))))))
 							]),
+						A2(author$project$Main$squaresWithClickMsg, row, column - 1));
+				}
+			}
+		}
+	});
+var author$project$Main$enemyGrid = MacCASOutreach$graphicsvg$GraphicSVG$group(
+	A2(author$project$Main$squaresWithClickMsg, 10, 10));
+var author$project$Main$grid2Location = _Utils_Tuple2(50.0, -150.0);
+var author$project$Main$gridLocation = _Utils_Tuple2(-300.0, -150.0);
+var author$project$Main$locationFromSquare2 = F3(
+	function (orientation, shipSize, _n0) {
+		var a = _n0.a;
+		var b = _n0.b;
+		return (!orientation) ? _Utils_Tuple2(author$project$Main$grid2Location.a + (a * author$project$Main$squareWidth), ((((author$project$Main$squareWidth * 10) + author$project$Main$grid2Location.b) - (b * author$project$Main$squareWidth)) - (((shipSize / 2) | 0) * author$project$Main$squareWidth)) + (((shipSize + 1) % 2) * (author$project$Main$squareWidth / 2))) : _Utils_Tuple2(((author$project$Main$grid2Location.a + (a * author$project$Main$squareWidth)) + (((shipSize / 2) | 0) * author$project$Main$squareWidth)) - (((shipSize + 1) % 2) * (author$project$Main$squareWidth / 2)), ((author$project$Main$squareWidth * 10) + author$project$Main$grid2Location.b) - (b * author$project$Main$squareWidth));
+	});
+var author$project$Main$squares = F2(
+	function (row, column) {
+		squares:
+		while (true) {
+			if (!column) {
+				var $temp$row = row - 1,
+					$temp$column = 10;
+				row = $temp$row;
+				column = $temp$column;
+				continue squares;
+			} else {
+				if (!row) {
+					return _List_Nil;
+				} else {
+					return _Utils_ap(
+						_List_fromArray(
+							[
+								A2(
+								MacCASOutreach$graphicsvg$GraphicSVG$move,
+								_Utils_Tuple2((author$project$Main$squareWidth * 10) - (row * author$project$Main$squareWidth), column * author$project$Main$squareWidth),
+								A3(
+									MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
+									MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
+									MacCASOutreach$graphicsvg$GraphicSVG$black,
+									A2(
+										MacCASOutreach$graphicsvg$GraphicSVG$filled,
+										MacCASOutreach$graphicsvg$GraphicSVG$blue,
+										MacCASOutreach$graphicsvg$GraphicSVG$square(author$project$Main$squareWidth))))
+							]),
 						A2(author$project$Main$squares, row, column - 1));
 				}
 			}
 		}
 	});
-var author$project$Main$gameGrid = MacCASOutreach$graphicsvg$GraphicSVG$group(
+var author$project$Main$playerGrid = MacCASOutreach$graphicsvg$GraphicSVG$group(
 	A2(author$project$Main$squares, 10, 10));
 var MacCASOutreach$graphicsvg$GraphicSVG$grey = A4(MacCASOutreach$graphicsvg$GraphicSVG$RGBA, 211, 215, 207, 1);
 var MacCASOutreach$graphicsvg$GraphicSVG$Oval = F2(
@@ -10504,155 +10179,184 @@ var MacCASOutreach$graphicsvg$GraphicSVG$rotate = F2(
 	function (theta, shape) {
 		return A2(MacCASOutreach$graphicsvg$GraphicSVG$Rotate, theta, shape);
 	});
-var author$project$Main$EditShip = function (a) {
-	return {$: 'EditShip', a: a};
-};
-var author$project$Main$gridLocation = _Utils_Tuple2(-300.0, -150.0);
 var author$project$Main$locationFromSquare = F3(
 	function (orientation, shipSize, _n0) {
 		var a = _n0.a;
 		var b = _n0.b;
 		return (!orientation) ? _Utils_Tuple2(author$project$Main$gridLocation.a + (a * author$project$Main$squareWidth), ((((author$project$Main$squareWidth * 10) + author$project$Main$gridLocation.b) - (b * author$project$Main$squareWidth)) - (((shipSize / 2) | 0) * author$project$Main$squareWidth)) + (((shipSize + 1) % 2) * (author$project$Main$squareWidth / 2))) : _Utils_Tuple2(((author$project$Main$gridLocation.a + (a * author$project$Main$squareWidth)) + (((shipSize / 2) | 0) * author$project$Main$squareWidth)) - (((shipSize + 1) % 2) * (author$project$Main$squareWidth / 2)), ((author$project$Main$squareWidth * 10) + author$project$Main$gridLocation.b) - (b * author$project$Main$squareWidth));
 	});
-var author$project$Main$gameShip = F2(
-	function (n, ship) {
-		return A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			A3(author$project$Main$locationFromSquare, ship.orientation, ship.size, ship.location),
-			A2(
-				MacCASOutreach$graphicsvg$GraphicSVG$rotate,
-				ship.orientation,
-				MacCASOutreach$graphicsvg$GraphicSVG$group(
-					_List_fromArray(
-						[
-							A2(
+var author$project$Main$gameShip = function (ship) {
+	return A2(
+		MacCASOutreach$graphicsvg$GraphicSVG$move,
+		A3(author$project$Main$locationFromSquare, ship.orientation, ship.size, ship.location),
+		A2(
+			MacCASOutreach$graphicsvg$GraphicSVG$rotate,
+			ship.orientation,
+			MacCASOutreach$graphicsvg$GraphicSVG$group(
+				_List_fromArray(
+					[
+						A2(
+						MacCASOutreach$graphicsvg$GraphicSVG$filled,
+						MacCASOutreach$graphicsvg$GraphicSVG$blank,
+						A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, author$project$Main$squareWidth + 2, (author$project$Main$squareWidth * ship.size) + 12)),
+						A3(
+						MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
+						MacCASOutreach$graphicsvg$GraphicSVG$solid(1),
+						MacCASOutreach$graphicsvg$GraphicSVG$black,
+						A2(
 							MacCASOutreach$graphicsvg$GraphicSVG$filled,
-							MacCASOutreach$graphicsvg$GraphicSVG$blank,
-							A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, author$project$Main$squareWidth + 2, (author$project$Main$squareWidth * ship.size) + 12)),
-							A2(
-							MacCASOutreach$graphicsvg$GraphicSVG$notifyTap,
-							author$project$Main$EditShip(n),
-							A3(
-								MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
-								MacCASOutreach$graphicsvg$GraphicSVG$solid(1),
-								MacCASOutreach$graphicsvg$GraphicSVG$black,
-								A2(
-									MacCASOutreach$graphicsvg$GraphicSVG$filled,
-									MacCASOutreach$graphicsvg$GraphicSVG$grey,
-									A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, author$project$Main$squareWidth, author$project$Main$squareWidth * ship.size))))
-						]))));
-	});
-var author$project$Main$RotateShip = {$: 'RotateShip'};
+							MacCASOutreach$graphicsvg$GraphicSVG$grey,
+							A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, author$project$Main$squareWidth, author$project$Main$squareWidth * ship.size)))
+					]))));
+};
+var author$project$Main$playerShips = function (ships) {
+	if (!ships.b) {
+		return _List_Nil;
+	} else {
+		var a = ships.a;
+		var b = ships.b;
+		return _Utils_ap(
+			_List_fromArray(
+				[
+					author$project$Main$gameShip(a)
+				]),
+			author$project$Main$playerShips(b));
+	}
+};
+var author$project$Main$SendGame = {$: 'SendGame'};
 var elm$html$Html$button = _VirtualDom_node('button');
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var elm$html$Html$Attributes$disabled = elm$html$Html$Attributes$boolProperty('disabled');
-var author$project$Main$rotateButton = function (model) {
-	return A2(
-		elm$html$Html$button,
-		_List_fromArray(
-			[
-				elm$html$Html$Events$onClick(author$project$Main$RotateShip),
-				elm$html$Html$Attributes$disabled(
-				_Utils_eq(model.gameState, author$project$Main$Idle))
-			]),
-		_List_fromArray(
-			[
-				elm$html$Html$text('Rotate ship')
-			]));
-};
-var author$project$Main$SendGame = {$: 'SendGame'};
-var author$project$Main$submitButton = function (model) {
+var author$project$Main$submitMoveButton = function (model) {
 	return A2(
 		elm$html$Html$button,
 		_List_fromArray(
 			[
 				elm$html$Html$Events$onClick(author$project$Main$SendGame),
-				elm$html$Html$Attributes$disabled(
-				!_Utils_eq(model.gameState, author$project$Main$Idle))
+				elm$html$Html$Attributes$disabled(!model.gameData.isPlayerTurn)
 			]),
 		_List_fromArray(
 			[
-				elm$html$Html$text('Start Game')
+				elm$html$Html$text('Fire Missile')
 			]));
 };
+var MacCASOutreach$graphicsvg$GraphicSVG$Circle = function (a) {
+	return {$: 'Circle', a: a};
+};
+var MacCASOutreach$graphicsvg$GraphicSVG$circle = function (r) {
+	return MacCASOutreach$graphicsvg$GraphicSVG$Circle(r);
+};
+var MacCASOutreach$graphicsvg$GraphicSVG$Path = function (a) {
+	return {$: 'Path', a: a};
+};
+var MacCASOutreach$graphicsvg$GraphicSVG$line = F2(
+	function (p1, p2) {
+		return MacCASOutreach$graphicsvg$GraphicSVG$Path(
+			_List_fromArray(
+				[p1, p2]));
+	});
+var MacCASOutreach$graphicsvg$GraphicSVG$outlined = F3(
+	function (style, outlineClr, stencil) {
+		var lineStyle = function () {
+			if (style.$ === 'NoLine') {
+				return elm$core$Maybe$Nothing;
+			} else {
+				return elm$core$Maybe$Just(
+					_Utils_Tuple2(style, outlineClr));
+			}
+		}();
+		return A3(MacCASOutreach$graphicsvg$GraphicSVG$Inked, elm$core$Maybe$Nothing, lineStyle, stencil);
+	});
+var MacCASOutreach$graphicsvg$GraphicSVG$red = A4(MacCASOutreach$graphicsvg$GraphicSVG$RGBA, 204, 0, 0, 1);
+var author$project$Main$target = MacCASOutreach$graphicsvg$GraphicSVG$group(
+	_List_fromArray(
+		[
+			A3(
+			MacCASOutreach$graphicsvg$GraphicSVG$outlined,
+			MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
+			MacCASOutreach$graphicsvg$GraphicSVG$red,
+			MacCASOutreach$graphicsvg$GraphicSVG$circle(author$project$Main$squareWidth / 2)),
+			A3(
+			MacCASOutreach$graphicsvg$GraphicSVG$outlined,
+			MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
+			MacCASOutreach$graphicsvg$GraphicSVG$red,
+			A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$line,
+				_Utils_Tuple2(0, author$project$Main$squareWidth / 2),
+				_Utils_Tuple2(0, author$project$Main$squareWidth / 4))),
+			A3(
+			MacCASOutreach$graphicsvg$GraphicSVG$outlined,
+			MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
+			MacCASOutreach$graphicsvg$GraphicSVG$red,
+			A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$line,
+				_Utils_Tuple2(0, (-author$project$Main$squareWidth) / 2),
+				_Utils_Tuple2(0, (-author$project$Main$squareWidth) / 4))),
+			A3(
+			MacCASOutreach$graphicsvg$GraphicSVG$outlined,
+			MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
+			MacCASOutreach$graphicsvg$GraphicSVG$red,
+			A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$line,
+				_Utils_Tuple2((-author$project$Main$squareWidth) / 2, 0),
+				_Utils_Tuple2((-author$project$Main$squareWidth) / 4, 0))),
+			A3(
+			MacCASOutreach$graphicsvg$GraphicSVG$outlined,
+			MacCASOutreach$graphicsvg$GraphicSVG$solid(2),
+			MacCASOutreach$graphicsvg$GraphicSVG$red,
+			A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$line,
+				_Utils_Tuple2(author$project$Main$squareWidth / 2, 0),
+				_Utils_Tuple2(author$project$Main$squareWidth / 4, 0)))
+		]));
 var elm$core$Debug$toString = _Debug_toString;
 var author$project$Main$mainScreen = function (model) {
-	return _List_fromArray(
-		[
-			author$project$Main$background,
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			_Utils_Tuple2(-325, 200),
-			A2(
-				MacCASOutreach$graphicsvg$GraphicSVG$filled,
-				MacCASOutreach$graphicsvg$GraphicSVG$black,
-				MacCASOutreach$graphicsvg$GraphicSVG$bold(
-					A2(
-						MacCASOutreach$graphicsvg$GraphicSVG$size,
-						30,
-						MacCASOutreach$graphicsvg$GraphicSVG$text(
-							(model.opponentName === '') ? 'Place your ships in the desired arrangement' : ('Join game with ' + model.opponentName)))))),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			_Utils_Tuple2(0, 150),
-			A2(
-				MacCASOutreach$graphicsvg$GraphicSVG$filled,
-				MacCASOutreach$graphicsvg$GraphicSVG$black,
+	return _Utils_ap(
+		_List_fromArray(
+			[
+				author$project$Main$background,
 				A2(
-					MacCASOutreach$graphicsvg$GraphicSVG$size,
-					15,
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				_Utils_Tuple2(-325, 200),
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$black,
+					MacCASOutreach$graphicsvg$GraphicSVG$bold(
+						A2(
+							MacCASOutreach$graphicsvg$GraphicSVG$size,
+							30,
+							MacCASOutreach$graphicsvg$GraphicSVG$text(model.sessionDescription))))),
+				A2(MacCASOutreach$graphicsvg$GraphicSVG$move, author$project$Main$gridLocation, author$project$Main$playerGrid),
+				A2(MacCASOutreach$graphicsvg$GraphicSVG$move, author$project$Main$grid2Location, author$project$Main$enemyGrid),
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				_Utils_Tuple2(150, -150),
+				A3(
+					MacCASOutreach$graphicsvg$GraphicSVG$html,
+					50,
+					100,
+					author$project$Main$submitMoveButton(model))),
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				_Utils_Tuple2(-350, -200),
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$black,
+					MacCASOutreach$graphicsvg$GraphicSVG$text(model.response))),
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				A3(author$project$Main$locationFromSquare2, 0, 1, model.targetLocation),
+				author$project$Main$target),
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				_Utils_Tuple2(-350, -200),
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$black,
 					MacCASOutreach$graphicsvg$GraphicSVG$text(
-						_Utils_eq(model.gameState, author$project$Main$Idle) ? 'Click on a ship to move it' : 'Click on the square you would like to move your ship to')))),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$notifyMouseMoveAt,
-			author$project$Main$MouseMoved,
-			A2(MacCASOutreach$graphicsvg$GraphicSVG$move, author$project$Main$gridLocation, author$project$Main$gameGrid)),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			_Utils_Tuple2(25, 125),
-			A3(
-				MacCASOutreach$graphicsvg$GraphicSVG$html,
-				50,
-				100,
-				author$project$Main$rotateButton(model))),
-			A3(
-			MacCASOutreach$graphicsvg$GraphicSVG$html,
-			50,
-			100,
-			author$project$Main$submitButton(model)),
-			A2(
-			author$project$Main$gameShip,
-			0,
-			A2(author$project$Main$getShipAt, 0, model.playerShips)),
-			A2(
-			author$project$Main$gameShip,
-			1,
-			A2(author$project$Main$getShipAt, 1, model.playerShips)),
-			A2(
-			author$project$Main$gameShip,
-			2,
-			A2(author$project$Main$getShipAt, 2, model.playerShips)),
-			A2(
-			author$project$Main$gameShip,
-			3,
-			A2(author$project$Main$getShipAt, 3, model.playerShips)),
-			A2(
-			author$project$Main$gameShip,
-			4,
-			A2(author$project$Main$getShipAt, 4, model.playerShips)),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$filled,
-			MacCASOutreach$graphicsvg$GraphicSVG$black,
-			MacCASOutreach$graphicsvg$GraphicSVG$text(model.response)),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			_Utils_Tuple2(0, -100),
-			A2(
-				MacCASOutreach$graphicsvg$GraphicSVG$filled,
-				MacCASOutreach$graphicsvg$GraphicSVG$black,
-				MacCASOutreach$graphicsvg$GraphicSVG$text(
-					elm$core$Debug$toString(model.queries))))
-		]);
+						elm$core$Debug$toString(model.gameData.playerShips))))
+			]),
+		author$project$Main$playerShips(model.gameData.playerShips));
 };
 var author$project$Main$view = function (model) {
 	var title = 'Battleship Game';

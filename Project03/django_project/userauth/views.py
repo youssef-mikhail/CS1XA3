@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 import json
@@ -37,7 +37,7 @@ def login_user(request):
 
 def logout_user(request):
     logout(request)
-    return HttpResponse('LoggedOut')
+    return HttpResponseRedirect("https://mac1xa3.ca/e/mikhaily/static/login.html")
 
 def user_info(request):
     if not request.user.is_authenticated:

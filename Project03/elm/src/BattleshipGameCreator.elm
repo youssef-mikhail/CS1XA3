@@ -1,5 +1,5 @@
 import Browser
-import Browser.Navigation exposing (Key(..))
+import Browser.Navigation exposing (Key(..), load)
 import GraphicSVG exposing (..)
 import GraphicSVG.App exposing (..)
 import Html exposing (button, Html)
@@ -27,6 +27,7 @@ type Msg
  | SendGame
  | GotResponse (Result Http.Error String)
  | GotJson (Result Http.Error String)
+ | GotSessionID (Result Http.Error Int)
 
 
 
@@ -54,7 +55,9 @@ init flags url key =
       queries = Maybe.withDefault "" url.query,
       title = "Place your ships in the desired arrangement",
       opponentName = ""
-      }, getSessionInfo (Maybe.withDefault "" url.query))
+      }, case url.query of
+      Nothing -> Cmd.none
+      Just a -> getSessionInfo a )
 
 
 type alias Ship = 
@@ -71,12 +74,14 @@ type State =
   | Idle
 
 
+
+
 decodeSessionInfo : JDecode.Decoder String
 decodeSessionInfo = JDecode.field "opponentName" JDecode.string
 
 shipToString : Ship -> String
 shipToString ship = String.fromInt (first ship.location) ++ String.fromInt (second ship.location)
-  ++ (if ship.orientation == 0 then "D" else "H")
+  ++ (if ship.orientation == 0 then "D" else "H") ++ String.fromInt ship.size
 
 
 modelEncoder : Model -> JEncode.Value
@@ -89,8 +94,11 @@ sendBoard model =
   Http.post {
     url = rootUrl ++ (if model.opponentName == "" then "game/startgame/" else "game/joingame/?" ++ model.queries),
     body = Http.jsonBody (modelEncoder model),
-    expect = Http.expectString GotResponse 
+    expect = Http.expectJson GotSessionID sessionIDDecoder 
   }
+
+sessionIDDecoder : JDecode.Decoder Int
+sessionIDDecoder = JDecode.field "gameid" JDecode.int
 
 getSessionInfo : String -> Cmd Msg
 getSessionInfo queries = 
@@ -241,9 +249,11 @@ update msg model = case msg of
           playerShips = 
           let 
               newShip = if not <| checkCollision (changeShipLocation (getShipAt ship model.playerShips) location) ((List.take ship model.playerShips) ++ (List.drop (ship + 1) model.playerShips)) then
-                if (getShipAt ship model.playerShips).orientation == 0 && second location > 10 - (getShipAt ship model.playerShips).size then
+                if (getShipAt ship model.playerShips).orientation == 0 && second location > 10 - (getShipAt ship model.playerShips).size 
+                 && (not <| checkCollision (changeShipLocation (getShipAt ship model.playerShips) location) ((List.take ship model.playerShips) ++ (List.drop (ship + 1) model.playerShips))) then
                 changeShipLocation (getShipAt ship model.playerShips) (first location, 10 - (getShipAt ship model.playerShips).size)
-                else if (getShipAt ship model.playerShips).orientation /= 0 && first location > 10 - (getShipAt ship model.playerShips).size then
+                else if (getShipAt ship model.playerShips).orientation /= 0 && first location > 10 - (getShipAt ship model.playerShips).size 
+                && (not <| checkCollision (changeShipLocation (getShipAt ship model.playerShips) location) ((List.take ship model.playerShips) ++ (List.drop (ship + 1) model.playerShips))) then
                 changeShipLocation (getShipAt ship model.playerShips) (10 - (getShipAt ship model.playerShips).size, second location) 
                 else
                 changeShipLocation (getShipAt ship model.playerShips) location
@@ -272,7 +282,12 @@ update msg model = case msg of
       case result of 
         Ok val -> ({model | response = val}, Cmd.none)
         Err error -> (handleError model error, Cmd.none)
-      
+    
+    GotSessionID result ->
+      case result of
+        Ok val -> (model, load (rootUrl ++ "static/game.html?gameid=" ++ String.fromInt val))
+        Err error -> (handleError model error, Cmd.none)
+
     GotJson result -> 
       case result of 
         Ok val -> ({model | opponentName = val}, Cmd.none)
@@ -290,7 +305,7 @@ handleError model error =
         Http.BadStatus status ->
             {model | response = "Error: Bad status " ++ String.fromInt status}
         Http.BadBody body ->
-            {model | response = body}
+            {model | response = "Bad body " ++ body}
 
 
 subscriptions : Model -> Sub Msg
