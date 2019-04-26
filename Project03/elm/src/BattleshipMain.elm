@@ -21,10 +21,12 @@ type Msg
  | UrlChange Url.Url
  | SquareClicked (Int, Int)
  | SquareHovered (Int, Int)
- | SendGame
+ | SendMove
  | GotResponse (Result Http.Error String)
  | GotGameData (Result Http.Error GameData)
  | GotSessionInfo (Result Http.Error String)
+ | GotMoveResponse (Result Http.Error String)
+ | RefreshGameData
 
 
 
@@ -74,6 +76,12 @@ init flags url key =
       gameData = GameData [Ship (0,0) 0.0 0] [Ship (0,0) 0.0 0] [(0,0)] [(0,0)] [(0,0)] [(0,0)] False 
       }, Cmd.batch [getGameState (Maybe.withDefault "" url.query), getSessionData (Maybe.withDefault "" url.query)] )
 
+sendMove : (Int, Int) -> String -> Cmd Msg
+sendMove move queries = 
+  Http.get {
+    url = rootUrl ++ "game/submitmove/?" ++ queries ++ "&move=" ++ missileToString move,
+    expect = Http.expectString GotMoveResponse
+  }
 
 decodeGameData : JDecode.Decoder GameData
 decodeGameData = JDecode.map7 GameData
@@ -97,6 +105,9 @@ sessionInfoDecoder = JDecode.field "sessionDescription" JDecode.string
 
 stringToMissile : String -> (Int, Int)
 stringToMissile strMissile = (Maybe.withDefault 0 (String.toInt (String.dropRight 1 strMissile)), Maybe.withDefault 0 (String.toInt (String.dropLeft 1 strMissile)))
+
+missileToString : (Int,Int) -> String
+missileToString (a,b) = String.fromInt a ++ String.fromInt b
 
 getGameState : String -> Cmd Msg
 getGameState queries = 
@@ -201,10 +212,16 @@ mainScreen model =  [
     playerGrid |> move gridLocation ,
     enemyGrid |> move grid2Location,
     html 50 100 (submitMoveButton model) |> move (150,-150),
+    html 50 100 refreshGameButton |> move (0,-150),
     text model.response |> filled black |> move (-350, -200),
     target |> move (locationFromSquare2 0 1 model.targetLocation),
     text (Debug.toString model.gameData.playerShips) |> filled black |> move (-350, -200)
-    ] ++ playerShips model.gameData.playerShips
+    ] 
+    ++ playerShips model.gameData.playerShips
+    ++ oppHitMissileList model.gameData.opponentHitMissiles
+    ++ playerHitMissileList model.gameData.playerHitMissiles
+    ++ playerMissedMissileList model.gameData.playerMissedMissiles
+    ++ oppMissedMissileList model.gameData.opponentMissedMissiles
 
 
 target : Shape Msg
@@ -214,6 +231,38 @@ target = group [
   line (0, -squareWidth/2) (0, -squareWidth/4) |> outlined (solid 2) red,
   line (-squareWidth/2, 0) (-squareWidth/4, 0) |> outlined (solid 2) red,
   line (squareWidth/2, 0) (squareWidth/4, 0) |> outlined (solid 2) red
+  ]
+
+oppHitMissileList : List (Int, Int) -> List (Shape Msg)
+oppHitMissileList missiles = case missiles of
+  [] -> []
+  (a::b) -> [hitMissile a |> move (locationFromSquare 0 1 a)] ++ oppHitMissileList b
+
+playerHitMissileList : List (Int, Int) -> List (Shape Msg)
+playerHitMissileList missiles = case missiles of
+  [] -> []
+  (a::b) -> [hitMissile a |> move (locationFromSquare2 0 1 a)] ++ playerHitMissileList b
+
+hitMissile : (Int, Int) -> Shape Msg
+hitMissile location = group [
+  square (squareWidth + 2) |> filled blank,
+  circle (squareWidth/2 - 4) |> filled red
+  ]
+
+oppMissedMissileList : List (Int, Int) -> List (Shape Msg)
+oppMissedMissileList missiles = case missiles of
+  [] -> []
+  (a::b) -> [missedMissile a |> move (locationFromSquare 0 1 a)] ++ oppMissedMissileList b
+
+playerMissedMissileList : List (Int, Int) -> List (Shape Msg)
+playerMissedMissileList missiles = case missiles of
+  [] -> []
+  (a::b) -> [missedMissile a |> move (locationFromSquare2 0 1 a)] ++ playerMissedMissileList b
+
+missedMissile : (Int, Int) -> Shape Msg
+missedMissile location = group [
+  square (squareWidth + 2) |> filled blank,
+  circle (squareWidth/2 - 8) |> filled black
   ]
 
 playerShips : List Ship -> List (Shape Msg)
@@ -231,9 +280,10 @@ gameShip ship = group [
 
 
 submitMoveButton : Model -> Html.Html Msg
-submitMoveButton model = button [onClick SendGame, disabled (not model.gameData.isPlayerTurn)] [Html.text "Fire Missile"]
+submitMoveButton model = button [onClick SendMove, disabled (not model.gameData.isPlayerTurn)] [Html.text "Fire Missile"]
 
-
+refreshGameButton : Html.Html Msg
+refreshGameButton = button [onClick RefreshGameData] [Html.text "Refresh Game"]
 
 squaresWithClickMsg : Int -> Int ->  List (Shape Msg)
 squaresWithClickMsg row column = if column == 0 then
@@ -276,7 +326,9 @@ update msg model = case msg of
 
         , Cmd.none)
 
-    SendGame -> (model, Cmd.none)
+    SendMove -> (model, sendMove model.targetLocation model.queries)
+
+    RefreshGameData -> (model, getGameState model.queries)
 
     GotResponse result -> 
       case result of 
@@ -291,6 +343,12 @@ update msg model = case msg of
     GotSessionInfo result ->
       case result of
         Ok info -> ({model | sessionDescription = info}, Cmd.none)
+        Err error -> (handleError model error, Cmd.none)
+      
+    GotMoveResponse result ->
+      case result of
+        Ok "MoveOK" -> (model, getGameState model.queries)
+        Ok other -> ({model | response = other}, getGameState model.queries)
         Err error -> (handleError model error, Cmd.none)
 
 

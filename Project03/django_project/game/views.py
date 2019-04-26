@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError, HttpResponseForbidden
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from .models import BattleshipSession
@@ -49,6 +49,35 @@ def getSessionInfo(request):
     return JsonResponse(sessionInfo)
 
 
+def submitMove(request):
+    parameters = request.GET
+    gameID = int(parameters.get("gameid", "0"))
+    move = parameters.get("move","")
+
+    if gameID == 0:
+        return HttpResponseBadRequest("No GameID was specified")
+
+    session = None
+
+    try:
+        session = BattleshipSession.objects.get(id=gameID)
+    except BattleshipSession.DoesNotExist:
+        return HttpResponse("Error: This game ID does not exist")
+    
+    if session == None:
+        return HttpResponse("An unknown error has occured")
+    
+    if not (request.user == session.player1 or request.user == session.player2):
+        return HttpResponseForbidden("Error: You are not a part of this game")
+    
+    if not request.user == session.currentTurn:
+        return HttpResponse("It is not your turn!")
+
+    session.add_missile(move, request.user)
+    session.switch_player_turns()
+    session.save()
+    return HttpResponse("MoveOK")
+    
 
 
 def updateGameState(request):
@@ -72,14 +101,17 @@ def updateGameState(request):
         return HttpResponse("An unknown error has occured")
     
     if not (request.user == session.player1 or request.user == session.player2):
-        return HttpResponse("Error: You are not a part of this game")
+        return HttpResponseForbidden("Error: You are not a part of this game")
+    
 
-    playerShips = [""]
-    opponentSunkShips = [""]
-    playerMissedMissiles = [""]
-    playerHitMissiles = [""]
-    opponentHitMissiles = [""]
-    opponentMissedMissiles = [""]
+    
+
+    playerShips = []
+    opponentSunkShips = []
+    playerMissedMissiles = []
+    playerHitMissiles = []
+    opponentHitMissiles = []
+    opponentMissedMissiles = []
     isPlayerTurn = (session.currentTurn == request.user) and not session.waitingForPlayer
 
 
@@ -99,11 +131,13 @@ def updateGameState(request):
         opponentHitMissiles = session.player1HitMissiles.split(",")
         opponentMissedMissiles = session.player1MissedMissiles.split(",")
     
-    #opponentSunkShips = []
-    #playerMissedMissiles = []
-    #playerHitMissiles = []
-    #opponentHitMissiles = []
-    #opponentMissedMissiles = []
+    #replace any data containing a list with one empty string with an empty list
+    playerShips = [] if playerShips == [""] else playerShips
+    opponentSunkShips = [] if opponentSunkShips == [""] else opponentSunkShips
+    playerMissedMissiles = [] if playerMissedMissiles == [""] else playerMissedMissiles
+    playerHitMissiles = [] if playerHitMissiles == [""] else playerHitMissiles
+    opponentHitMissiles = [] if opponentHitMissiles == [""] else opponentHitMissiles
+    opponentMissedMissiles = [] if opponentMissedMissiles == [""] else opponentMissedMissiles
 
 
     gameData = {
