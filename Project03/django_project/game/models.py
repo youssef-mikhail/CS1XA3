@@ -34,10 +34,10 @@ class BattleshipSession(models.Model):
 
     waitingForPlayer = models.BooleanField()
 
-    player1 = models.ForeignKey(User, related_name="player1",on_delete=models.DO_NOTHING)
-    player2 = models.ForeignKey(User, related_name="player2",on_delete=models.DO_NOTHING)
+    player1 = models.ForeignKey(User, related_name="player1",on_delete=models.CASCADE)
+    player2 = models.ForeignKey(User, related_name="player2",on_delete=models.CASCADE)
 
-    currentTurn = models.ForeignKey(User,related_name="currentTurn", on_delete=models.DO_NOTHING)
+    currentTurn = models.ForeignKey(User,related_name="currentTurn", on_delete=models.CASCADE)
 
     #Ships from both players that are still alive
     player1LiveShips = models.CharField(max_length=25)
