@@ -92,7 +92,7 @@ modelEncoder model =
 sendBoard : Model -> Cmd Msg
 sendBoard model = 
   Http.post {
-    url = rootUrl ++ (if model.opponentName == "" then "game/startgame/" else "game/joingame/?" ++ model.queries),
+    url = rootUrl ++ (if model.queries == "" then "game/startgame/" else "game/joingame/?" ++ model.queries),
     body = Http.jsonBody (modelEncoder model),
     expect = Http.expectJson GotSessionID sessionIDDecoder 
   }
@@ -192,7 +192,7 @@ mainScreen model =  [
     gameShip 3 (getShipAt 3 model.playerShips),
     gameShip 4 (getShipAt 4 model.playerShips),
     text model.response |> filled black,
-    text (Debug.toString model.queries) |> filled black |> move (0, -100)
+    text (Debug.toString (model.queries == "")) |> filled black |> move (0, -100)
     ]
 
 

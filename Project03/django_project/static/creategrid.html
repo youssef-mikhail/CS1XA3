@@ -9713,7 +9713,7 @@ var author$project$Main$sendBoard = function (model) {
 			expect: A2(elm$http$Http$expectJson, author$project$Main$GotSessionID, author$project$Main$sessionIDDecoder),
 			url: _Utils_ap(
 				author$project$Main$rootUrl,
-				(model.opponentName === '') ? 'game/startgame/' : ('game/joingame/?' + model.queries))
+				(model.queries === '') ? 'game/startgame/' : ('game/joingame/?' + model.queries))
 		});
 };
 var elm$browser$Browser$Navigation$load = _Browser_load;
@@ -10651,7 +10651,7 @@ var author$project$Main$mainScreen = function (model) {
 				MacCASOutreach$graphicsvg$GraphicSVG$filled,
 				MacCASOutreach$graphicsvg$GraphicSVG$black,
 				MacCASOutreach$graphicsvg$GraphicSVG$text(
-					elm$core$Debug$toString(model.queries))))
+					elm$core$Debug$toString(model.queries === ''))))
 		]);
 };
 var author$project$Main$view = function (model) {

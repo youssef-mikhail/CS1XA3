@@ -157,7 +157,7 @@ class BattleshipSession(models.Model):
         else:
             raise InvalidMoveException("Player is not in game")
 
-
+        return hit
             
 
     def switch_player_turns(self):
@@ -180,7 +180,11 @@ class BattleshipSession(models.Model):
     
     def __str__(self):
         if not self.waitingForPlayer:
-            return self.player1.username + ' vs ' + self.player2.username
+            string = self.player1.username + ' vs ' + self.player2.username
+            if self.gameWinner == "":
+                return string
+            else:
+                return string + " (Winner: " + self.gameWinner + ") "
         else:
             return "Join game with " + self.player1.username
             

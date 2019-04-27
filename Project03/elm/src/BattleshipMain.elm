@@ -24,7 +24,7 @@ type Msg
  | SendMove
  | GotResponse (Result Http.Error String)
  | GotGameData (Result Http.Error GameData)
- | GotSessionInfo (Result Http.Error String)
+ | GotSessionInfo (Result Http.Error (String,String))
  | GotMoveResponse (Result Http.Error String)
  | RefreshGameData
 
@@ -35,9 +35,14 @@ type alias Model =
         { gameState : State,
           gameData : GameData,
           queries : String,
-          response : String,
+          error : String,
+          message : String,
           sessionDescription : String,
-          targetLocation : (Int, Int)
+          targetLocation : (Int, Int),
+          opponentName : String,
+          refreshTimer : Int,
+          changeMessage : Bool,
+          gameOver : Bool
           }
 
 type alias Ship = 
@@ -51,6 +56,7 @@ type alias Ship =
 type alias GameData = 
   {
     playerShips : List Ship,
+    playerSunkShips : List Ship,
     opponentSunkShips : List Ship,
     playerMissedMissiles : List (Int, Int),
     playerHitMissiles : List (Int, Int),
@@ -61,19 +67,25 @@ type alias GameData =
 
 
 type State = 
-  Idle
+  Ready
   | MovingTarget
   | WaitingTurn
+  | WaitingPlayer
 
 --Initial values for the app model
 init : () -> Url.Url -> Key -> ( Model, Cmd Msg )
 init flags url key = 
-  ( { response = "",
-      gameState = WaitingTurn,
+  ( { error = "",
+      gameState = WaitingPlayer,
       sessionDescription = "",
+      message = "",
+      changeMessage = True,
+      opponentName = "",
+      gameOver = False,
       targetLocation = (0,0),
       queries = Maybe.withDefault "" url.query,
-      gameData = GameData [Ship (0,0) 0.0 0] [Ship (0,0) 0.0 0] [(0,0)] [(0,0)] [(0,0)] [(0,0)] False 
+      gameData = GameData [Ship (0,0) 0.0 0] [Ship (0,0) 0.0 0] [Ship (0,0) 0.0 0] [(0,0)] [(0,0)] [(0,0)] [(0,0)] False,
+      refreshTimer = 360
       }, Cmd.batch [getGameState (Maybe.withDefault "" url.query), getSessionData (Maybe.withDefault "" url.query)] )
 
 sendMove : (Int, Int) -> String -> Cmd Msg
@@ -84,8 +96,9 @@ sendMove move queries =
   }
 
 decodeGameData : JDecode.Decoder GameData
-decodeGameData = JDecode.map7 GameData
+decodeGameData = JDecode.map8 GameData
   (JDecode.field "playerShips" (JDecode.list (JDecode.map stringToShip JDecode.string)))
+  (JDecode.field "playerSunkShips" (JDecode.list (JDecode.map stringToShip JDecode.string)))
   (JDecode.field "opponentSunkShips" (JDecode.list (JDecode.map stringToShip JDecode.string)))
   (JDecode.field "playerMissedMissiles" (JDecode.list (JDecode.map stringToMissile JDecode.string)))
   (JDecode.field "playerHitMissiles" (JDecode.list (JDecode.map stringToMissile JDecode.string)))
@@ -100,8 +113,10 @@ getSessionData query =
     expect = Http.expectJson GotSessionInfo sessionInfoDecoder
   }
 
-sessionInfoDecoder : JDecode.Decoder String
-sessionInfoDecoder = JDecode.field "sessionDescription" JDecode.string
+sessionInfoDecoder : JDecode.Decoder (String,String)
+sessionInfoDecoder = JDecode.map2 Tuple.pair
+    (JDecode.field "sessionDescription" JDecode.string)
+    (JDecode.field "opponentName" JDecode.string)
 
 stringToMissile : String -> (Int, Int)
 stringToMissile strMissile = (Maybe.withDefault 0 (String.toInt (String.dropRight 1 strMissile)), Maybe.withDefault 0 (String.toInt (String.dropLeft 1 strMissile)))
@@ -212,12 +227,15 @@ mainScreen model =  [
     playerGrid |> move gridLocation ,
     enemyGrid |> move grid2Location,
     html 50 100 (submitMoveButton model) |> move (150,-150),
-    html 50 100 refreshGameButton |> move (0,-150),
-    text model.response |> filled black |> move (-350, -200),
-    target |> move (locationFromSquare2 0 1 model.targetLocation),
-    text (Debug.toString model.gameData.playerShips) |> filled black |> move (-350, -200)
+    html 60 125 refreshGameButton |> move (0,-150),
+    text model.error |> filled black |> move (-350, -200),
+    text model.message |> bold |> filled black |> move (100,-200),
+    text ("Game will automatically refresh in " ++ String.fromInt (model.refreshTimer // 60) ++ " seconds") |> size 10|> filled black |> move (-200,-175),
+    target |> move (locationFromSquare2 0 1 model.targetLocation)
     ] 
     ++ playerShips model.gameData.playerShips
+    ++ sunkShips model.gameData.playerSunkShips
+    ++ oppSunkShips model.gameData.opponentSunkShips
     ++ oppHitMissileList model.gameData.opponentHitMissiles
     ++ playerHitMissileList model.gameData.playerHitMissiles
     ++ playerMissedMissileList model.gameData.playerMissedMissiles
@@ -268,19 +286,40 @@ missedMissile location = group [
 playerShips : List Ship -> List (Shape Msg)
 playerShips ships = case ships of
     [] -> []
-    (a::b) -> [gameShip a] ++ playerShips b
+    (a::b) -> [playerShip a |> rotate a.orientation |> move (locationFromSquare a.orientation a.size a.location)]
+              ++ playerShips b
 
---TODO: make dragging and dropping easier
-gameShip : Ship -> Shape Msg
-gameShip ship = group [
+
+oppSunkShips : List Ship -> List (Shape Msg)
+oppSunkShips ships = case ships of
+    [] -> []
+    (a::b) -> [sunkShip a |> rotate a.orientation |> move (locationFromSquare2 a.orientation a.size a.location)]
+              ++ oppSunkShips b
+
+sunkShips : List Ship -> List (Shape Msg)
+sunkShips ships = case ships of
+    [] -> []
+    (a::b) -> [sunkShip a |> rotate a.orientation |> move (locationFromSquare a.orientation a.size a.location)]
+              ++ sunkShips b
+
+
+sunkShip : Ship -> Shape Msg
+sunkShip ship = group [
+  rectangle (squareWidth + 2) (toFloat (squareWidth*ship.size + 12)) |> filled blank,
+  oval squareWidth (toFloat (squareWidth*ship.size)) |> filled black |> addOutline (solid 1) black
+  ]
+
+
+
+playerShip : Ship -> Shape Msg
+playerShip ship = group [
   rectangle (squareWidth + 2) (toFloat (squareWidth*ship.size + 12)) |> filled blank,
   oval squareWidth (toFloat (squareWidth*ship.size)) |> filled grey |> addOutline (solid 1) black 
-
-  ] |> rotate ship.orientation |> move (locationFromSquare ship.orientation ship.size ship.location)
+  ] 
 
 
 submitMoveButton : Model -> Html.Html Msg
-submitMoveButton model = button [onClick SendMove, disabled (not model.gameData.isPlayerTurn)] [Html.text "Fire Missile"]
+submitMoveButton model = button [onClick SendMove, disabled (model.gameState /= Ready)] [Html.text "Fire Missile"]
 
 refreshGameButton : Html.Html Msg
 refreshGameButton = button [onClick RefreshGameData] [Html.text "Refresh Game"]
@@ -310,19 +349,25 @@ update : Msg -> Model ->  (Model, Cmd Msg)
 update msg model = case msg of
 
     --Handling of real time animations and events that are not triggered by other messages
-    Tick time getKeyState -> (model, Cmd.none)
+    Tick time getKeyState -> ({model | 
+      refreshTimer = if model.gameData.isPlayerTurn || model.gameOver then model.refreshTimer else model.refreshTimer - 1
+        }, if model.refreshTimer <= 0 then 
+          if model.opponentName /= "" then getGameState model.queries else Cmd.batch [getGameState model.queries, getSessionData model.queries] else Cmd.none)
 
       
     MakeRequest urlRequest -> (model, Cmd.none)
     UrlChange url -> (model,Cmd.none)
-    SquareClicked location -> ({model | gameState = Idle, targetLocation = location}, Cmd.none)
+    SquareClicked location -> ({model | gameState = if model.gameData.isPlayerTurn then Ready else model.gameState, 
+      targetLocation = if model.gameData.isPlayerTurn then location else model.targetLocation}, Cmd.none)
     SquareHovered location -> (
       case model.gameState of
-        Idle -> model
+        Ready -> model
 
         MovingTarget -> {model | targetLocation = location}
 
         WaitingTurn -> model
+
+        WaitingPlayer -> model
 
         , Cmd.none)
 
@@ -332,38 +377,49 @@ update msg model = case msg of
 
     GotResponse result -> 
       case result of 
-        Ok val -> ({model | response = val}, Cmd.none)
+        Ok val -> ({model | error = val}, Cmd.none)
         Err error -> (handleError model error, Cmd.none)
     
     GotGameData result ->
       case result of
-        Ok data -> ({model | gameData = data}, Cmd.none)
+        Ok data -> ({model | gameData = data,
+                             refreshTimer = 360,
+                             changeMessage = True, 
+                             message = if model.changeMessage then 
+                              if data.isPlayerTurn then "Click on a square to select your target"
+                              else if model.opponentName == "" || model.gameOver then "" else "Waiting for other player's move..."
+                              else if model.gameOver then ""
+                              else model.message}, Cmd.none)
         Err error -> (handleError model error, Cmd.none)
 
     GotSessionInfo result ->
       case result of
-        Ok info -> ({model | sessionDescription = info}, Cmd.none)
+        Ok (info, opponentName) -> ({model | sessionDescription = info, opponentName = opponentName}, Cmd.none)
         Err error -> (handleError model error, Cmd.none)
       
     GotMoveResponse result ->
       case result of
-        Ok "MoveOK" -> (model, getGameState model.queries)
-        Ok other -> ({model | response = other}, getGameState model.queries)
+        Ok "Hit" -> ({model | message = "Hit! Shoot again!", changeMessage = False, gameState = MovingTarget}, getGameState model.queries)
+        Ok "Miss" -> ({model | message = "You missed!", gameState = WaitingTurn, changeMessage = False}, getGameState model.queries)
+        Ok "Win" -> ({model | message = "You win!", gameOver = True, changeMessage = False}, Cmd.batch [getGameState model.queries, getSessionData model.queries])
+        Ok "Lose" -> ({model | message = "You lost!", gameOver = True, changeMessage = False}, Cmd.batch [getGameState model.queries, getSessionData model.queries])
+        Ok other -> ({model | message = other, changeMessage = True }, getGameState model.queries)
         Err error -> (handleError model error, Cmd.none)
 
 
 handleError model error = 
     case error of
         Http.BadUrl url ->
-            { model | response = "Error: Bad url (" ++ url ++ ")"}
+            { model | error = "Error: Bad url (" ++ url ++ ")"}
         Http.Timeout ->
-            {model | response = "Error: Request timed out"}
+            {model | error = "Error: Request timed out"}
         Http.NetworkError ->
-            {model | response = "Error: Network error"}
-        Http.BadStatus status ->
-            {model | response = "Error: Bad status " ++ String.fromInt status}
+            {model | error = "Error: Network error"}
+        Http.BadStatus 403 -> {model | error = "Error: You do not have permission to view this game!"}
+        Http.BadStatus 404 -> {model | error = "Error: The game this URL is referring to does not exist!"}
+        Http.BadStatus status -> {model | error = "Error: Bad status " ++ String.fromInt status}
         Http.BadBody body ->
-            {model | response = "Error: Bad body " ++ body}
+            {model | error = "Error: Bad body " ++ body}
 
 
 subscriptions : Model -> Sub Msg

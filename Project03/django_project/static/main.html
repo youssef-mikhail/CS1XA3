@@ -6208,6 +6208,7 @@ var author$project$Main$update = F2(
 		}
 	});
 var elm$html$Html$a = _VirtualDom_node('a');
+var elm$html$Html$div = _VirtualDom_node('div');
 var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var elm$json$Json$Encode$string = _Json_wrap;
@@ -6240,21 +6241,26 @@ var author$project$Main$sessionList = F2(
 					_List_fromArray(
 						[
 							A2(
-							elm$html$Html$a,
+							elm$html$Html$div,
+							_List_Nil,
 							_List_fromArray(
 								[
-									elm$html$Html$Attributes$href(url)
-								]),
-							_List_fromArray(
-								[
-									elm$html$Html$text(description)
+									A2(
+									elm$html$Html$a,
+									_List_fromArray(
+										[
+											elm$html$Html$Attributes$href(url)
+										]),
+									_List_fromArray(
+										[
+											elm$html$Html$text(description)
+										]))
 								]))
 						]),
 					A2(author$project$Main$sessionList, urls, descriptions));
 			}
 		}
 	});
-var elm$html$Html$div = _VirtualDom_node('div');
 var elm$html$Html$h1 = _VirtualDom_node('h1');
 var elm$html$Html$h2 = _VirtualDom_node('h2');
 var author$project$Main$view = function (model) {

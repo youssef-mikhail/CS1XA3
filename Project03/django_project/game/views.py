@@ -6,11 +6,15 @@ from .models import BattleshipSession
 import json
 from django.http import JsonResponse
 
+rootUrl = "https://mac1xa3.ca/e/mikhaily/"
 
 # Create your views here.
 def getSessionInfo(request):
     parameters = request.GET
     gameID = int(parameters.get("gameid", "0"))
+
+    if not request.user.is_authenticated:
+        return HttpResponseForbidden("You are not logged in")
 
     if gameID == 0:
         return HttpResponseBadRequest("NoGameID")
@@ -25,7 +29,11 @@ def getSessionInfo(request):
     if session == None:
         return HttpResponseServerError("An unknown error occurred")
 
-    sessionInfo = {}
+    sessionInfo = {
+        "opponentName" : "",
+        "sessionDescription" : ""
+    }
+
 
     if session.waitingForPlayer:
         if not request.user == session.player1:
@@ -36,7 +44,6 @@ def getSessionInfo(request):
         else:
             sessionInfo["opponentName"] = session.player1.username
         
-        sessionInfo["isPlayerTurn"] = request.user == session.currentTurn
     
     sessionDescription = ""
 
@@ -62,10 +69,10 @@ def submitMove(request):
     try:
         session = BattleshipSession.objects.get(id=gameID)
     except BattleshipSession.DoesNotExist:
-        return HttpResponse("Error: This game ID does not exist")
+        return HttpResponseNotFound("Error: This game ID does not exist")
     
     if session == None:
-        return HttpResponse("An unknown error has occured")
+        return HttpResponseServerError("An unknown error has occured")
     
     if not (request.user == session.player1 or request.user == session.player2):
         return HttpResponseForbidden("Error: You are not a part of this game")
@@ -73,19 +80,30 @@ def submitMove(request):
     if not request.user == session.currentTurn:
         return HttpResponse("It is not your turn!")
 
-    session.add_missile(move, request.user)
-    session.switch_player_turns()
+    didHit = session.add_missile(move, request.user)
+    if not didHit:
+        session.switch_player_turns()
+    if session.player1LiveShips == "":
+        session.gameWinner = session.player2.username
+    elif session.player2LiveShips == "":
+        session.gameWinner = session.player1.username
     session.save()
-    return HttpResponse("MoveOK")
+    if session.gameWinner == request.user.username:
+        return HttpResponse("Win")
+    elif session.gameWinner != "":
+        return HttpResponse("Lose")
+
+    if didHit:
+        return HttpResponse("Hit")
+    else:
+        return HttpResponse("Miss")
+
     
 
 
 def updateGameState(request):
     parameters = request.GET
     gameID = int(parameters.get("gameid", "0"))
-
-    if not request.user.is_authenticated:
-        return HttpResponse("Error: Not logged in")
 
     if gameID == 0:
         return HttpResponse("Error: No gameID was specified")
@@ -95,7 +113,7 @@ def updateGameState(request):
     try:
         session = BattleshipSession.objects.get(id=gameID)
     except BattleshipSession.DoesNotExist:
-        return HttpResponse("Error: This game ID does not exist")
+        return HttpResponseNotFound("Error: This game ID does not exist")
     
     if session == None:
         return HttpResponse("An unknown error has occured")
@@ -112,11 +130,13 @@ def updateGameState(request):
     playerHitMissiles = []
     opponentHitMissiles = []
     opponentMissedMissiles = []
-    isPlayerTurn = (session.currentTurn == request.user) and not session.waitingForPlayer
+    isPlayerTurn = (session.currentTurn == request.user) and not session.waitingForPlayer and session.gameWinner == ""
+    print(session.gameWinner)
 
 
     if request.user == session.player1:
         playerShips = session.player1LiveShips.split(",")
+        playerSunkShips = session.player1SunkShips.split(",")
         opponentSunkShips = session.player2SunkShips.split(",")
         playerMissedMissiles = session.player1MissedMissiles.split(",")
         playerHitMissiles = session.player1HitMissiles.split(",")
@@ -125,6 +145,7 @@ def updateGameState(request):
         
     else:
         playerShips = session.player2LiveShips.split(",")
+        playerSunkShips = session.player2SunkShips.split(",")
         opponentSunkShips = session.player1SunkShips.split(",")
         playerMissedMissiles = session.player2MissedMissiles.split(",")
         playerHitMissiles = session.player2HitMissiles.split(",")
@@ -133,6 +154,7 @@ def updateGameState(request):
     
     #replace any data containing a list with one empty string with an empty list
     playerShips = [] if playerShips == [""] else playerShips
+    playerSunkShips = [] if playerSunkShips == [""] else playerSunkShips
     opponentSunkShips = [] if opponentSunkShips == [""] else opponentSunkShips
     playerMissedMissiles = [] if playerMissedMissiles == [""] else playerMissedMissiles
     playerHitMissiles = [] if playerHitMissiles == [""] else playerHitMissiles
@@ -142,12 +164,14 @@ def updateGameState(request):
 
     gameData = {
         "playerShips" : playerShips,
+        "playerSunkShips" : playerSunkShips,
         "opponentSunkShips" : opponentSunkShips,
         "playerMissedMissiles" : playerMissedMissiles,
         "playerHitMissiles" : playerHitMissiles,
         "opponentHitMissiles" : opponentHitMissiles,
         "opponentMissedMissiles" : opponentMissedMissiles,
-        "isPlayerTurn" : isPlayerTurn
+        "isPlayerTurn" : isPlayerTurn,
+        "gameWinner" : session.gameWinner
     }
 
     print(playerShips)
@@ -177,14 +201,14 @@ def getGames(request):
     sessionData = {"urls" : [], "descriptions" : []}
     for session in sessions:
         if session.waitingForPlayer and request.user != session.player1:
-            sessionData["urls"].append("https://mac1xa3.ca/e/mikhaily/static/creategrid.html?gameid=" + str(session.id))
+            sessionData["urls"].append("creategrid.html?gameid=" + str(session.id))
             sessionData["descriptions"].append(str(session))
 
         elif session.waitingForPlayer:
-            sessionData["urls"].append("https://mac1xa3.ca/e/mikhaily/static/game.html?gameid=" + str(session.id))
+            sessionData["urls"].append("game.html?gameid=" + str(session.id))
             sessionData["descriptions"].append("Waiting for player to join your game")
         else:
-            sessionData["urls"].append("https://mac1xa3.ca/e/mikhaily/static/game.html?gameid=" + str(session.id))
+            sessionData["urls"].append("game.html?gameid=" + str(session.id))
             sessionData["descriptions"].append(str(session))
     
     return JsonResponse(sessionData)
@@ -213,16 +237,17 @@ def joinGame(request):
     if session == None:
         return HttpResponse("An unknown error occured")
 
+    response = {"gameid" : session.id}
 
     if not session.waitingForPlayer:
         return HttpResponse("Error: This game is not currently accepting a new player")
     elif session.player1 == request.user:
-        return HttpResponseRedirect("https://mac1xa3.ca/e/mikhaily/static/game.html?gameid="+ str(gameID))
-    
+        return JsonResponse(response)
 
     session.add_player(request.user, ships["ships"])
     session.save()
-    return HttpResponseRedirect("https://mac1xa3.ca/e/mikhaily/static/game.html?gameid=" + str(gameID))
+    
+    return JsonResponse(response)
 
     
 

@@ -54,7 +54,7 @@ sessionList urlList descriptionList = case urlList of
     [] -> []
     (url::urls) -> case descriptionList of
         [] -> []
-        (description::descriptions) -> [a [href url] [text description]] ++ sessionList urls descriptions
+        (description::descriptions) -> [div [] [a [href url] [text description]]] ++ sessionList urls descriptions
 
 
 init : () -> ( Model, Cmd Msg )

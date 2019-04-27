@@ -8749,15 +8749,15 @@ var author$project$Main$Tick = F2(
 var author$project$Main$UrlChange = function (a) {
 	return {$: 'UrlChange', a: a};
 };
-var author$project$Main$GameData = F7(
-	function (playerShips, opponentSunkShips, playerMissedMissiles, playerHitMissiles, opponentHitMissiles, opponentMissedMissiles, isPlayerTurn) {
-		return {isPlayerTurn: isPlayerTurn, opponentHitMissiles: opponentHitMissiles, opponentMissedMissiles: opponentMissedMissiles, opponentSunkShips: opponentSunkShips, playerHitMissiles: playerHitMissiles, playerMissedMissiles: playerMissedMissiles, playerShips: playerShips};
+var author$project$Main$GameData = F8(
+	function (playerShips, playerSunkShips, opponentSunkShips, playerMissedMissiles, playerHitMissiles, opponentHitMissiles, opponentMissedMissiles, isPlayerTurn) {
+		return {isPlayerTurn: isPlayerTurn, opponentHitMissiles: opponentHitMissiles, opponentMissedMissiles: opponentMissedMissiles, opponentSunkShips: opponentSunkShips, playerHitMissiles: playerHitMissiles, playerMissedMissiles: playerMissedMissiles, playerShips: playerShips, playerSunkShips: playerSunkShips};
 	});
 var author$project$Main$Ship = F3(
 	function (location, orientation, size) {
 		return {location: location, orientation: orientation, size: size};
 	});
-var author$project$Main$WaitingTurn = {$: 'WaitingTurn'};
+var author$project$Main$WaitingPlayer = {$: 'WaitingPlayer'};
 var author$project$Main$GotGameData = function (a) {
 	return {$: 'GotGameData', a: a};
 };
@@ -8811,14 +8811,19 @@ var author$project$Main$stringToShip = function (strShip) {
 };
 var elm$json$Json$Decode$bool = _Json_decodeBool;
 var elm$json$Json$Decode$list = _Json_decodeList;
-var elm$json$Json$Decode$map7 = _Json_map7;
+var elm$json$Json$Decode$map8 = _Json_map8;
 var elm$json$Json$Decode$string = _Json_decodeString;
-var author$project$Main$decodeGameData = A8(
-	elm$json$Json$Decode$map7,
+var author$project$Main$decodeGameData = A9(
+	elm$json$Json$Decode$map8,
 	author$project$Main$GameData,
 	A2(
 		elm$json$Json$Decode$field,
 		'playerShips',
+		elm$json$Json$Decode$list(
+			A2(elm$json$Json$Decode$map, author$project$Main$stringToShip, elm$json$Json$Decode$string))),
+	A2(
+		elm$json$Json$Decode$field,
+		'playerSunkShips',
 		elm$json$Json$Decode$list(
 			A2(elm$json$Json$Decode$map, author$project$Main$stringToShip, elm$json$Json$Decode$string))),
 	A2(
@@ -9493,7 +9498,15 @@ var author$project$Main$getGameState = function (queries) {
 var author$project$Main$GotSessionInfo = function (a) {
 	return {$: 'GotSessionInfo', a: a};
 };
-var author$project$Main$sessionInfoDecoder = A2(elm$json$Json$Decode$field, 'sessionDescription', elm$json$Json$Decode$string);
+var elm$core$Tuple$pair = F2(
+	function (a, b) {
+		return _Utils_Tuple2(a, b);
+	});
+var author$project$Main$sessionInfoDecoder = A3(
+	elm$json$Json$Decode$map2,
+	elm$core$Tuple$pair,
+	A2(elm$json$Json$Decode$field, 'sessionDescription', elm$json$Json$Decode$string),
+	A2(elm$json$Json$Decode$field, 'opponentName', elm$json$Json$Decode$string));
 var author$project$Main$getSessionData = function (query) {
 	return elm$http$Http$get(
 		{
@@ -9505,8 +9518,18 @@ var author$project$Main$init = F3(
 	function (flags, url, key) {
 		return _Utils_Tuple2(
 			{
-				gameData: A7(
+				changeMessage: true,
+				error: '',
+				gameData: A8(
 					author$project$Main$GameData,
+					_List_fromArray(
+						[
+							A3(
+							author$project$Main$Ship,
+							_Utils_Tuple2(0, 0),
+							0.0,
+							0)
+						]),
 					_List_fromArray(
 						[
 							A3(
@@ -9540,9 +9563,12 @@ var author$project$Main$init = F3(
 							_Utils_Tuple2(0, 0)
 						]),
 					false),
-				gameState: author$project$Main$WaitingTurn,
+				gameOver: false,
+				gameState: author$project$Main$WaitingPlayer,
+				message: '',
+				opponentName: '',
 				queries: A2(elm$core$Maybe$withDefault, '', url.query),
-				response: '',
+				refreshTimer: 360,
 				sessionDescription: '',
 				targetLocation: _Utils_Tuple2(0, 0)
 			},
@@ -9559,7 +9585,9 @@ var elm$core$Platform$Sub$none = elm$core$Platform$Sub$batch(_List_Nil);
 var author$project$Main$subscriptions = function (model) {
 	return elm$core$Platform$Sub$none;
 };
-var author$project$Main$Idle = {$: 'Idle'};
+var author$project$Main$MovingTarget = {$: 'MovingTarget'};
+var author$project$Main$Ready = {$: 'Ready'};
+var author$project$Main$WaitingTurn = {$: 'WaitingTurn'};
 var author$project$Main$handleError = F2(
 	function (model, error) {
 		switch (error.$) {
@@ -9567,27 +9595,38 @@ var author$project$Main$handleError = F2(
 				var url = error.a;
 				return _Utils_update(
 					model,
-					{response: 'Error: Bad url (' + (url + ')')});
+					{error: 'Error: Bad url (' + (url + ')')});
 			case 'Timeout':
 				return _Utils_update(
 					model,
-					{response: 'Error: Request timed out'});
+					{error: 'Error: Request timed out'});
 			case 'NetworkError':
 				return _Utils_update(
 					model,
-					{response: 'Error: Network error'});
+					{error: 'Error: Network error'});
 			case 'BadStatus':
-				var status = error.a;
-				return _Utils_update(
-					model,
-					{
-						response: 'Error: Bad status ' + elm$core$String$fromInt(status)
-					});
+				switch (error.a) {
+					case 403:
+						return _Utils_update(
+							model,
+							{error: 'Error: You do not have permission to view this game!'});
+					case 404:
+						return _Utils_update(
+							model,
+							{error: 'Error: The game this URL is referring to does not exist!'});
+					default:
+						var status = error.a;
+						return _Utils_update(
+							model,
+							{
+								error: 'Error: Bad status ' + elm$core$String$fromInt(status)
+							});
+				}
 			default:
 				var body = error.a;
 				return _Utils_update(
 					model,
-					{response: 'Error: Bad body ' + body});
+					{error: 'Error: Bad body ' + body});
 		}
 	});
 var author$project$Main$GotMoveResponse = function (a) {
@@ -9614,13 +9653,25 @@ var author$project$Main$sendMove = F2(
 				url: author$project$Main$rootUrl + ('game/submitmove/?' + (queries + ('&move=' + author$project$Main$missileToString(move))))
 			});
 	});
+var elm$core$Basics$neq = _Utils_notEqual;
 var author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
 			case 'Tick':
 				var time = msg.a;
 				var getKeyState = msg.b;
-				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							refreshTimer: (model.gameData.isPlayerTurn || model.gameOver) ? model.refreshTimer : (model.refreshTimer - 1)
+						}),
+					(model.refreshTimer <= 0) ? ((model.opponentName !== '') ? author$project$Main$getGameState(model.queries) : elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								author$project$Main$getGameState(model.queries),
+								author$project$Main$getSessionData(model.queries)
+							]))) : elm$core$Platform$Cmd$none);
 			case 'MakeRequest':
 				var urlRequest = msg.a;
 				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
@@ -9632,7 +9683,10 @@ var author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{gameState: author$project$Main$Idle, targetLocation: location}),
+						{
+							gameState: model.gameData.isPlayerTurn ? author$project$Main$Ready : model.gameState,
+							targetLocation: model.gameData.isPlayerTurn ? location : model.targetLocation
+						}),
 					elm$core$Platform$Cmd$none);
 			case 'SquareHovered':
 				var location = msg.a;
@@ -9640,12 +9694,14 @@ var author$project$Main$update = F2(
 					function () {
 						var _n1 = model.gameState;
 						switch (_n1.$) {
-							case 'Idle':
+							case 'Ready':
 								return model;
 							case 'MovingTarget':
 								return _Utils_update(
 									model,
 									{targetLocation: location});
+							case 'WaitingTurn':
+								return model;
 							default:
 								return model;
 						}
@@ -9666,7 +9722,7 @@ var author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{response: val}),
+							{error: val}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
@@ -9681,7 +9737,12 @@ var author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{gameData: data}),
+							{
+								changeMessage: true,
+								gameData: data,
+								message: model.changeMessage ? (data.isPlayerTurn ? 'Click on a square to select your target' : (((model.opponentName === '') || model.gameOver) ? '' : 'Waiting for other player\'s move...')) : (model.gameOver ? '' : model.message),
+								refreshTimer: 360
+							}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
@@ -9692,11 +9753,13 @@ var author$project$Main$update = F2(
 			case 'GotSessionInfo':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
-					var info = result.a;
+					var _n5 = result.a;
+					var info = _n5.a;
+					var opponentName = _n5.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
-							{sessionDescription: info}),
+							{opponentName: opponentName, sessionDescription: info}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
@@ -9707,17 +9770,48 @@ var author$project$Main$update = F2(
 			default:
 				var result = msg.a;
 				if (result.$ === 'Ok') {
-					if (result.a === 'MoveOK') {
-						return _Utils_Tuple2(
-							model,
-							author$project$Main$getGameState(model.queries));
-					} else {
-						var other = result.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{response: other}),
-							author$project$Main$getGameState(model.queries));
+					switch (result.a) {
+						case 'Hit':
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{changeMessage: false, gameState: author$project$Main$MovingTarget, message: 'Hit! Shoot again!'}),
+								author$project$Main$getGameState(model.queries));
+						case 'Miss':
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{changeMessage: false, gameState: author$project$Main$WaitingTurn, message: 'You missed!'}),
+								author$project$Main$getGameState(model.queries));
+						case 'Win':
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{changeMessage: false, gameOver: true, message: 'You win!'}),
+								elm$core$Platform$Cmd$batch(
+									_List_fromArray(
+										[
+											author$project$Main$getGameState(model.queries),
+											author$project$Main$getSessionData(model.queries)
+										])));
+						case 'Lose':
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{changeMessage: false, gameOver: true, message: 'You lost!'}),
+								elm$core$Platform$Cmd$batch(
+									_List_fromArray(
+										[
+											author$project$Main$getGameState(model.queries),
+											author$project$Main$getSessionData(model.queries)
+										])));
+						default:
+							var other = result.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{changeMessage: true, message: other}),
+								author$project$Main$getGameState(model.queries));
 					}
 				} else {
 					var error = result.a;
@@ -10256,6 +10350,56 @@ var author$project$Main$oppMissedMissileList = function (missiles) {
 			author$project$Main$oppMissedMissileList(b));
 	}
 };
+var MacCASOutreach$graphicsvg$GraphicSVG$rotate = F2(
+	function (theta, shape) {
+		return A2(MacCASOutreach$graphicsvg$GraphicSVG$Rotate, theta, shape);
+	});
+var MacCASOutreach$graphicsvg$GraphicSVG$Oval = F2(
+	function (a, b) {
+		return {$: 'Oval', a: a, b: b};
+	});
+var MacCASOutreach$graphicsvg$GraphicSVG$oval = F2(
+	function (w, h) {
+		return A2(MacCASOutreach$graphicsvg$GraphicSVG$Oval, w, h);
+	});
+var author$project$Main$sunkShip = function (ship) {
+	return MacCASOutreach$graphicsvg$GraphicSVG$group(
+		_List_fromArray(
+			[
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$filled,
+				MacCASOutreach$graphicsvg$GraphicSVG$blank,
+				A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, author$project$Main$squareWidth + 2, (author$project$Main$squareWidth * ship.size) + 12)),
+				A3(
+				MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
+				MacCASOutreach$graphicsvg$GraphicSVG$solid(1),
+				MacCASOutreach$graphicsvg$GraphicSVG$black,
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$black,
+					A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, author$project$Main$squareWidth, author$project$Main$squareWidth * ship.size)))
+			]));
+};
+var author$project$Main$oppSunkShips = function (ships) {
+	if (!ships.b) {
+		return _List_Nil;
+	} else {
+		var a = ships.a;
+		var b = ships.b;
+		return _Utils_ap(
+			_List_fromArray(
+				[
+					A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$move,
+					A3(author$project$Main$locationFromSquare2, a.orientation, a.size, a.location),
+					A2(
+						MacCASOutreach$graphicsvg$GraphicSVG$rotate,
+						a.orientation,
+						author$project$Main$sunkShip(a)))
+				]),
+			author$project$Main$oppSunkShips(b));
+	}
+};
 var author$project$Main$squares = F2(
 	function (row, column) {
 		squares:
@@ -10327,41 +10471,23 @@ var author$project$Main$playerMissedMissileList = function (missiles) {
 	}
 };
 var MacCASOutreach$graphicsvg$GraphicSVG$grey = A4(MacCASOutreach$graphicsvg$GraphicSVG$RGBA, 211, 215, 207, 1);
-var MacCASOutreach$graphicsvg$GraphicSVG$Oval = F2(
-	function (a, b) {
-		return {$: 'Oval', a: a, b: b};
-	});
-var MacCASOutreach$graphicsvg$GraphicSVG$oval = F2(
-	function (w, h) {
-		return A2(MacCASOutreach$graphicsvg$GraphicSVG$Oval, w, h);
-	});
-var MacCASOutreach$graphicsvg$GraphicSVG$rotate = F2(
-	function (theta, shape) {
-		return A2(MacCASOutreach$graphicsvg$GraphicSVG$Rotate, theta, shape);
-	});
-var author$project$Main$gameShip = function (ship) {
-	return A2(
-		MacCASOutreach$graphicsvg$GraphicSVG$move,
-		A3(author$project$Main$locationFromSquare, ship.orientation, ship.size, ship.location),
-		A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$rotate,
-			ship.orientation,
-			MacCASOutreach$graphicsvg$GraphicSVG$group(
-				_List_fromArray(
-					[
-						A2(
-						MacCASOutreach$graphicsvg$GraphicSVG$filled,
-						MacCASOutreach$graphicsvg$GraphicSVG$blank,
-						A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, author$project$Main$squareWidth + 2, (author$project$Main$squareWidth * ship.size) + 12)),
-						A3(
-						MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
-						MacCASOutreach$graphicsvg$GraphicSVG$solid(1),
-						MacCASOutreach$graphicsvg$GraphicSVG$black,
-						A2(
-							MacCASOutreach$graphicsvg$GraphicSVG$filled,
-							MacCASOutreach$graphicsvg$GraphicSVG$grey,
-							A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, author$project$Main$squareWidth, author$project$Main$squareWidth * ship.size)))
-					]))));
+var author$project$Main$playerShip = function (ship) {
+	return MacCASOutreach$graphicsvg$GraphicSVG$group(
+		_List_fromArray(
+			[
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$filled,
+				MacCASOutreach$graphicsvg$GraphicSVG$blank,
+				A2(MacCASOutreach$graphicsvg$GraphicSVG$rectangle, author$project$Main$squareWidth + 2, (author$project$Main$squareWidth * ship.size) + 12)),
+				A3(
+				MacCASOutreach$graphicsvg$GraphicSVG$addOutline,
+				MacCASOutreach$graphicsvg$GraphicSVG$solid(1),
+				MacCASOutreach$graphicsvg$GraphicSVG$black,
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$grey,
+					A2(MacCASOutreach$graphicsvg$GraphicSVG$oval, author$project$Main$squareWidth, author$project$Main$squareWidth * ship.size)))
+			]));
 };
 var author$project$Main$playerShips = function (ships) {
 	if (!ships.b) {
@@ -10372,7 +10498,13 @@ var author$project$Main$playerShips = function (ships) {
 		return _Utils_ap(
 			_List_fromArray(
 				[
-					author$project$Main$gameShip(a)
+					A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$move,
+					A3(author$project$Main$locationFromSquare, a.orientation, a.size, a.location),
+					A2(
+						MacCASOutreach$graphicsvg$GraphicSVG$rotate,
+						a.orientation,
+						author$project$Main$playerShip(a)))
 				]),
 			author$project$Main$playerShips(b));
 	}
@@ -10398,12 +10530,33 @@ var author$project$Main$submitMoveButton = function (model) {
 		_List_fromArray(
 			[
 				elm$html$Html$Events$onClick(author$project$Main$SendMove),
-				elm$html$Html$Attributes$disabled(!model.gameData.isPlayerTurn)
+				elm$html$Html$Attributes$disabled(
+				!_Utils_eq(model.gameState, author$project$Main$Ready))
 			]),
 		_List_fromArray(
 			[
 				elm$html$Html$text('Fire Missile')
 			]));
+};
+var author$project$Main$sunkShips = function (ships) {
+	if (!ships.b) {
+		return _List_Nil;
+	} else {
+		var a = ships.a;
+		var b = ships.b;
+		return _Utils_ap(
+			_List_fromArray(
+				[
+					A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$move,
+					A3(author$project$Main$locationFromSquare, a.orientation, a.size, a.location),
+					A2(
+						MacCASOutreach$graphicsvg$GraphicSVG$rotate,
+						a.orientation,
+						author$project$Main$sunkShip(a)))
+				]),
+			author$project$Main$sunkShips(b));
+	}
 };
 var MacCASOutreach$graphicsvg$GraphicSVG$Path = function (a) {
 	return {$: 'Path', a: a};
@@ -10467,7 +10620,6 @@ var author$project$Main$target = MacCASOutreach$graphicsvg$GraphicSVG$group(
 				_Utils_Tuple2(author$project$Main$squareWidth / 2, 0),
 				_Utils_Tuple2(author$project$Main$squareWidth / 4, 0)))
 		]));
-var elm$core$Debug$toString = _Debug_toString;
 var author$project$Main$mainScreen = function (model) {
 	return _Utils_ap(
 		_List_fromArray(
@@ -10497,36 +10649,51 @@ var author$project$Main$mainScreen = function (model) {
 				A2(
 				MacCASOutreach$graphicsvg$GraphicSVG$move,
 				_Utils_Tuple2(0, -150),
-				A3(MacCASOutreach$graphicsvg$GraphicSVG$html, 50, 100, author$project$Main$refreshGameButton)),
+				A3(MacCASOutreach$graphicsvg$GraphicSVG$html, 60, 125, author$project$Main$refreshGameButton)),
 				A2(
 				MacCASOutreach$graphicsvg$GraphicSVG$move,
 				_Utils_Tuple2(-350, -200),
 				A2(
 					MacCASOutreach$graphicsvg$GraphicSVG$filled,
 					MacCASOutreach$graphicsvg$GraphicSVG$black,
-					MacCASOutreach$graphicsvg$GraphicSVG$text(model.response))),
+					MacCASOutreach$graphicsvg$GraphicSVG$text(model.error))),
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				_Utils_Tuple2(100, -200),
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$black,
+					MacCASOutreach$graphicsvg$GraphicSVG$bold(
+						MacCASOutreach$graphicsvg$GraphicSVG$text(model.message)))),
+				A2(
+				MacCASOutreach$graphicsvg$GraphicSVG$move,
+				_Utils_Tuple2(-200, -175),
+				A2(
+					MacCASOutreach$graphicsvg$GraphicSVG$filled,
+					MacCASOutreach$graphicsvg$GraphicSVG$black,
+					A2(
+						MacCASOutreach$graphicsvg$GraphicSVG$size,
+						10,
+						MacCASOutreach$graphicsvg$GraphicSVG$text(
+							'Game will automatically refresh in ' + (elm$core$String$fromInt((model.refreshTimer / 60) | 0) + ' seconds'))))),
 				A2(
 				MacCASOutreach$graphicsvg$GraphicSVG$move,
 				A3(author$project$Main$locationFromSquare2, 0, 1, model.targetLocation),
-				author$project$Main$target),
-				A2(
-				MacCASOutreach$graphicsvg$GraphicSVG$move,
-				_Utils_Tuple2(-350, -200),
-				A2(
-					MacCASOutreach$graphicsvg$GraphicSVG$filled,
-					MacCASOutreach$graphicsvg$GraphicSVG$black,
-					MacCASOutreach$graphicsvg$GraphicSVG$text(
-						elm$core$Debug$toString(model.gameData.playerShips))))
+				author$project$Main$target)
 			]),
 		_Utils_ap(
 			author$project$Main$playerShips(model.gameData.playerShips),
 			_Utils_ap(
-				author$project$Main$oppHitMissileList(model.gameData.opponentHitMissiles),
+				author$project$Main$sunkShips(model.gameData.playerSunkShips),
 				_Utils_ap(
-					author$project$Main$playerHitMissileList(model.gameData.playerHitMissiles),
+					author$project$Main$oppSunkShips(model.gameData.opponentSunkShips),
 					_Utils_ap(
-						author$project$Main$playerMissedMissileList(model.gameData.playerMissedMissiles),
-						author$project$Main$oppMissedMissileList(model.gameData.opponentMissedMissiles))))));
+						author$project$Main$oppHitMissileList(model.gameData.opponentHitMissiles),
+						_Utils_ap(
+							author$project$Main$playerHitMissileList(model.gameData.playerHitMissiles),
+							_Utils_ap(
+								author$project$Main$playerMissedMissileList(model.gameData.playerMissedMissiles),
+								author$project$Main$oppMissedMissileList(model.gameData.opponentMissedMissiles))))))));
 };
 var author$project$Main$view = function (model) {
 	var title = 'Battleship Game';
