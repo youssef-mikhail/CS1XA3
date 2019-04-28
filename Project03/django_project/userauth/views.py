@@ -48,7 +48,7 @@ def login_user(request):
 #logout user
 def logout_user(request):
     logout(request)
-    return HttpResponseRedirect("https://mac1xa3.ca/e/mikhaily/static/login.html")
+    return HttpResponseRedirect("https://mac1xa3.ca/u/mikhaily/login.html")
 
 #returns username
 def user_info(request):
