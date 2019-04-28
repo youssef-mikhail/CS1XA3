@@ -16,8 +16,9 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 
-root = '/e/mikhaily/'
+root = 'e/mikhaily/'
 
 urlpatterns = [
     path(root + 'userauth/', include('userauth.urls')),
+    path(root + 'game/', include('game.urls')),
 ]
