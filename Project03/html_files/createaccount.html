@@ -6337,7 +6337,13 @@ var author$project$Main$view = function (model) {
 					[
 						elm$html$Html$text('Already have an account? You can log in here.')
 					])),
-				elm$html$Html$text(model.response)
+				A2(
+				elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						elm$html$Html$text(model.response)
+					]))
 			]));
 };
 var elm$browser$Browser$element = _Browser_element;

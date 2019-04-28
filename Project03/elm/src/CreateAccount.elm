@@ -50,7 +50,7 @@ view model =
         input [placeholder "Confirm Password", value model.confirmPassword, onInput ConfirmPasswordEntered, type_ "password" ] [],
         button [onClick SubmitButtonPressed, disabled (model.password /= model.confirmPassword || model.password == "" || model.name == "") ] [text "Create Account"],  --submit button is only enabled when password and confirm password boxes match
         a [href "login.html"] [text "Already have an account? You can log in here."],
-        text model.response
+        div [] [text model.response]
      ]
 
 --Submit credentials in POST body and get response
@@ -70,7 +70,7 @@ update msg model =
         GotText result ->   --Got response from server after submitting credentials
             case result of 
                 Ok "Success" -> --Login successful, redirect to login page
-                    (model, load (rootURL ++ "static/login.html"))
+                    (model, load "login.html")
 
                 Ok val ->   --Login not successful, show server response
                     ( { model | response = val }, Cmd.none )

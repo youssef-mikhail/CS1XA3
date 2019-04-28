@@ -101,8 +101,9 @@ init flags url key =
 --Send move to server in POST body
 sendMove : (Int, Int) -> String -> Cmd Msg
 sendMove move queries = 
-  Http.get {
-    url = rootUrl ++ "game/submitmove/?" ++ queries ++ "&move=" ++ missileToString move,
+  Http.post {
+    url = rootUrl ++ "game/submitmove/?" ++ queries,
+    body = Http.stringBody "application/x-www-form-urlencoded" ("move=" ++ missileToString move),
     expect = Http.expectString GotMoveResponse
   }
 
@@ -461,7 +462,7 @@ handleError model error =
             ({model | error = "Error: Request timed out"}, Cmd.none)
         Http.NetworkError ->
             ({model | error = "Error: Network error"}, Cmd.none)
-        Http.BadStatus 403 -> (model, load "https://mac1xa3.ca/u/mikhaily/login.html") --Redirect the user to the login page if they are not authorized to view this game
+        Http.BadStatus 403 -> (model, load "login.html") --Redirect the user to the login page if they are not authorized to view this game
         Http.BadStatus 404 -> ({model | error = "Error: The game this URL is referring to does not exist!"}, Cmd.none)
         Http.BadStatus status -> ({model | error = "Error: Bad status " ++ String.fromInt status}, Cmd.none)
         Http.BadBody body ->

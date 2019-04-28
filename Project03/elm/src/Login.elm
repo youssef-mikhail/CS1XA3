@@ -70,7 +70,7 @@ update msg model =
                     ( {model | response = "Your username or password is invalid"}, Cmd.none)
 
                 Ok "LoggedIn" ->    --Login successful, redirect to main page
-                    (model, load (rootUrl ++ "static/main.html"))
+                    (model, load "main.html")
                 
                 Ok val ->
                     ( { model | response = val }, Cmd.none )

@@ -83,7 +83,7 @@ view model =
     if model.error == "" then
     div [] ([
         h1 [] [text "Welcome to Battleship!"],
-        a [href "https://mac1xa3.ca/e/mikhaily/userauth/logoutuser/"] [text "Log out"],
+        a [href rootUrl ++ "e/mikhaily/userauth/logoutuser/"] [text "Log out"],
         div [] [a [href "creategrid.html"] [text "Create new game"]],
         h2 [] [text ("Available sessions for " ++ model.currentUser ++ ":")]
      ] ++ sessionList model.sessionUrls model.sessionDescriptions) --Get the list of sessions as HTML objects
@@ -98,7 +98,7 @@ update msg model =
         GotText result ->
             case result of
                 Ok "NotLoggedIn" -> --If this is returned by the server, redirect to login page
-                    (model, load (rootURL ++ "static/login.html"))
+                    (model, load "login.html")
 
                 Ok val ->   --If anything else besides "NotLoggedIn" is returned, display it as the username
                     ( { model | currentUser = val }, getGames)

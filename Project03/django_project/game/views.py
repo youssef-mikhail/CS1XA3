@@ -8,19 +8,23 @@ from django.http import JsonResponse
 
 rootUrl = "https://mac1xa3.ca/e/mikhaily/"
 
-# Create your views here.
+
+#Returns session info as JSON
 def getSessionInfo(request):
+    #check that the session exists and that the user is logged in
     parameters = request.GET
     gameID = int(parameters.get("gameid", "0"))
 
     if not request.user.is_authenticated:
         return HttpResponseForbidden("You are not logged in")
 
+    #Return a 400 status if a game ID is not specified. This is a required field
     if gameID == 0:
         return HttpResponseBadRequest("NoGameID")
 
     session = None
 
+    #try to get the session with the appropriate game ID
     try:
         session = BattleshipSession.objects.get(id=gameID)
     except BattleshipSession.DoesNotExist:
@@ -29,6 +33,7 @@ def getSessionInfo(request):
     if session == None:
         return HttpResponseServerError("An unknown error occurred")
 
+    #Get session info to return to the user
     sessionInfo = {
         "opponentName" : "",
         "sessionDescription" : ""
@@ -55,11 +60,12 @@ def getSessionInfo(request):
     sessionInfo["sessionDescription"] = sessionDescription
     return JsonResponse(sessionInfo)
 
-
+#Get and parse a player's move
 def submitMove(request):
     parameters = request.GET
     gameID = int(parameters.get("gameid", "0"))
-    move = parameters.get("move","")
+    body = request.POST
+    move = body.get("move","")
 
     if gameID == 0:
         return HttpResponseBadRequest("No GameID was specified")
@@ -74,12 +80,15 @@ def submitMove(request):
     if session == None:
         return HttpResponseServerError("An unknown error has occured")
     
+    #Make sure the user is actually in the game
     if not (request.user == session.player1 or request.user == session.player2):
         return HttpResponseForbidden("Error: You are not a part of this game")
     
+    #make sure it is the user's turn
     if not request.user == session.currentTurn:
         return HttpResponse("It is not your turn!")
 
+    #Switch turns if the missile missed
     didHit = session.add_missile(move, request.user)
     if not didHit:
         session.switch_player_turns()
@@ -93,6 +102,7 @@ def submitMove(request):
     elif session.gameWinner != "":
         return HttpResponse("Lose")
 
+    #Return a hit response or a miss response depending on if the missile hit
     if didHit:
         return HttpResponse("Hit")
     else:
@@ -100,8 +110,9 @@ def submitMove(request):
 
     
 
-
+#Send updated game state to the client in JSON
 def updateGameState(request):
+    #Get game ID and get its corresponding session
     parameters = request.GET
     gameID = int(parameters.get("gameid", "0"))
 
@@ -118,12 +129,13 @@ def updateGameState(request):
     if session == None:
         return HttpResponse("An unknown error has occured")
     
+    #Send a 403 if user is not in the session
     if not (request.user == session.player1 or request.user == session.player2):
         return HttpResponseForbidden("Error: You are not a part of this game")
     
 
     
-
+    #Initialize all of the data to be sent to the client
     playerShips = []
     opponentSunkShips = []
     playerMissedMissiles = []
@@ -131,9 +143,8 @@ def updateGameState(request):
     opponentHitMissiles = []
     opponentMissedMissiles = []
     isPlayerTurn = (session.currentTurn == request.user) and not session.waitingForPlayer and session.gameWinner == ""
-    print(session.gameWinner)
 
-
+    #Send the appropriate data for player 1 and player 2
     if request.user == session.player1:
         playerShips = session.player1LiveShips.split(",")
         playerSunkShips = session.player1SunkShips.split(",")
@@ -161,7 +172,7 @@ def updateGameState(request):
     opponentHitMissiles = [] if opponentHitMissiles == [""] else opponentHitMissiles
     opponentMissedMissiles = [] if opponentMissedMissiles == [""] else opponentMissedMissiles
 
-
+    #Put all of the data obtained above in a dictionary
     gameData = {
         "playerShips" : playerShips,
         "playerSunkShips" : playerSunkShips,
@@ -173,12 +184,12 @@ def updateGameState(request):
         "isPlayerTurn" : isPlayerTurn,
         "gameWinner" : session.gameWinner
     }
-
-    print(playerShips)
+    
+    #Return dictionary as JSON
     return JsonResponse(gameData)
     
 
-
+#Create and initialize a new game session
 def startgame(request):
     data = json.loads(request.body)
     if not request.user.is_authenticated:
@@ -186,19 +197,23 @@ def startgame(request):
     
     newSession = BattleshipSession.objects.create_session(request.user, data["ships"])
     newSession.save()
+    #Send the new game ID to the client
     response = {"gameid" : newSession.id}
     return JsonResponse(response)
 
 
-
+#Get a list of all available sessions for a user
 def getGames(request):
     if not request.user.is_authenticated:
-        return HttpResponse("NotLoggedIn")
+        return HttpResponseForbidden("NotLoggedIn")
     
+    #Get a list of all available sessions for a user
     sessions = BattleshipSession.objects.getSessionsForUser(request.user)
-    print(sessions)
+
 
     sessionData = {"urls" : [], "descriptions" : []}
+
+    #Personalize each URL and description depending on who the user is
     for session in sessions:
         if session.waitingForPlayer and request.user != session.player1:
             sessionData["urls"].append("creategrid.html?gameid=" + str(session.id))
@@ -211,21 +226,27 @@ def getGames(request):
             sessionData["urls"].append("game.html?gameid=" + str(session.id))
             sessionData["descriptions"].append(str(session))
     
+    #Return descriptions and URLs
     return JsonResponse(sessionData)
     
-    
+
+#Join an existing game that is accepting players
 def joinGame(request):
     if not request.user.is_authenticated:
         return HttpResponseForbidden("Error: Not logged in. Please log in and try again")
+    
+    #Get game ID
     parameters = request.GET
     gameID = int(parameters.get("gameid", "0"))
     if gameID == 0:
         return HttpResponse("Error: Game ID not specified")
 
+    #Get ships from request body
     ships = json.loads(request.body)
 
+    #Return a 400 if no ships were sent in the request body
     if ships == "":
-        return HttpResponse("Error: No game data was specified")
+        return HttpResponseBadRequest("Error: No game data was specified")
     session = None
 
     try:
@@ -237,7 +258,10 @@ def joinGame(request):
         return HttpResponse("An unknown error occured")
 
     response = {"gameid" : session.id}
-
+    
+    #Make sure the game is accepting a new player before adding the player to it
+    #If the player is already in the session and wants to join themselves for some
+    #reason, just redirect that silly rascal to the game page and let em wait it out
     if not session.waitingForPlayer:
         return HttpResponse("Error: This game is not currently accepting a new player")
     elif session.player1 == request.user:
@@ -245,7 +269,7 @@ def joinGame(request):
 
     session.add_player(request.user, ships["ships"])
     session.save()
-    
+    #return new game ID
     return JsonResponse(response)
 
     

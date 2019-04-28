@@ -9615,9 +9615,7 @@ var author$project$Main$handleError = F2(
 				switch (error.a) {
 					case 403:
 						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{error: 'Error: You do not have permission to view this game!'}),
+							model,
 							elm$browser$Browser$Navigation$load('https://mac1xa3.ca/u/mikhaily/login.html'));
 					case 404:
 						return _Utils_Tuple2(
@@ -9660,12 +9658,21 @@ var elm$http$Http$expectString = function (toMsg) {
 		toMsg,
 		elm$http$Http$resolve(elm$core$Result$Ok));
 };
+var elm$http$Http$post = function (r) {
+	return elm$http$Http$request(
+		{body: r.body, expect: r.expect, headers: _List_Nil, method: 'POST', timeout: elm$core$Maybe$Nothing, tracker: elm$core$Maybe$Nothing, url: r.url});
+};
+var elm$http$Http$stringBody = _Http_pair;
 var author$project$Main$sendMove = F2(
 	function (move, queries) {
-		return elm$http$Http$get(
+		return elm$http$Http$post(
 			{
+				body: A2(
+					elm$http$Http$stringBody,
+					'application/x-www-form-urlencoded',
+					'move=' + author$project$Main$missileToString(move)),
 				expect: elm$http$Http$expectString(author$project$Main$GotMoveResponse),
-				url: author$project$Main$rootUrl + ('game/submitmove/?' + (queries + ('&move=' + author$project$Main$missileToString(move))))
+				url: author$project$Main$rootUrl + ('game/submitmove/?' + queries)
 			});
 	});
 var author$project$Main$update = F2(

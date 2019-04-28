@@ -307,7 +307,7 @@ update msg model = case msg of
     
     GotSessionID result ->  --Got the new game ID. Redirect user to it
       case result of
-        Ok val -> (model, load (rootUrl ++ "game.html?gameid=" ++ String.fromInt val))
+        Ok val -> (model, load ("game.html?gameid=" ++ String.fromInt val))
         Err error -> handleError model error
 
     GotJson result -> --Got JSON with session info 
