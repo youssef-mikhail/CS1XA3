@@ -9588,45 +9588,60 @@ var author$project$Main$subscriptions = function (model) {
 var author$project$Main$MovingTarget = {$: 'MovingTarget'};
 var author$project$Main$Ready = {$: 'Ready'};
 var author$project$Main$WaitingTurn = {$: 'WaitingTurn'};
+var elm$browser$Browser$Navigation$load = _Browser_load;
 var author$project$Main$handleError = F2(
 	function (model, error) {
 		switch (error.$) {
 			case 'BadUrl':
 				var url = error.a;
-				return _Utils_update(
-					model,
-					{error: 'Error: Bad url (' + (url + ')')});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{error: 'Error: Bad url (' + (url + ')')}),
+					elm$core$Platform$Cmd$none);
 			case 'Timeout':
-				return _Utils_update(
-					model,
-					{error: 'Error: Request timed out'});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{error: 'Error: Request timed out'}),
+					elm$core$Platform$Cmd$none);
 			case 'NetworkError':
-				return _Utils_update(
-					model,
-					{error: 'Error: Network error'});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{error: 'Error: Network error'}),
+					elm$core$Platform$Cmd$none);
 			case 'BadStatus':
 				switch (error.a) {
 					case 403:
-						return _Utils_update(
-							model,
-							{error: 'Error: You do not have permission to view this game!'});
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{error: 'Error: You do not have permission to view this game!'}),
+							elm$browser$Browser$Navigation$load('https://mac1xa3.ca/u/mikhaily/login.html'));
 					case 404:
-						return _Utils_update(
-							model,
-							{error: 'Error: The game this URL is referring to does not exist!'});
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{error: 'Error: The game this URL is referring to does not exist!'}),
+							elm$core$Platform$Cmd$none);
 					default:
 						var status = error.a;
-						return _Utils_update(
-							model,
-							{
-								error: 'Error: Bad status ' + elm$core$String$fromInt(status)
-							});
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									error: 'Error: Bad status ' + elm$core$String$fromInt(status)
+								}),
+							elm$core$Platform$Cmd$none);
 				}
 			default:
 				var body = error.a;
-				return _Utils_update(
-					model,
-					{error: 'Error: Bad body ' + body});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{error: 'Error: Bad body ' + body}),
+					elm$core$Platform$Cmd$none);
 		}
 	});
 var author$project$Main$GotMoveResponse = function (a) {
@@ -9653,7 +9668,6 @@ var author$project$Main$sendMove = F2(
 				url: author$project$Main$rootUrl + ('game/submitmove/?' + (queries + ('&move=' + author$project$Main$missileToString(move))))
 			});
 	});
-var elm$core$Basics$neq = _Utils_notEqual;
 var author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -9666,12 +9680,12 @@ var author$project$Main$update = F2(
 						{
 							refreshTimer: (model.gameData.isPlayerTurn || model.gameOver) ? model.refreshTimer : (model.refreshTimer - 1)
 						}),
-					(model.refreshTimer <= 0) ? ((model.opponentName !== '') ? author$project$Main$getGameState(model.queries) : elm$core$Platform$Cmd$batch(
+					(model.refreshTimer <= 0) ? elm$core$Platform$Cmd$batch(
 						_List_fromArray(
 							[
 								author$project$Main$getGameState(model.queries),
 								author$project$Main$getSessionData(model.queries)
-							]))) : elm$core$Platform$Cmd$none);
+							])) : elm$core$Platform$Cmd$none);
 			case 'MakeRequest':
 				var urlRequest = msg.a;
 				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
@@ -9715,21 +9729,6 @@ var author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					model,
 					author$project$Main$getGameState(model.queries));
-			case 'GotResponse':
-				var result = msg.a;
-				if (result.$ === 'Ok') {
-					var val = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{error: val}),
-						elm$core$Platform$Cmd$none);
-				} else {
-					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
-				}
 			case 'GotGameData':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
@@ -9740,22 +9739,21 @@ var author$project$Main$update = F2(
 							{
 								changeMessage: true,
 								gameData: data,
-								message: model.changeMessage ? (data.isPlayerTurn ? 'Click on a square to select your target' : (((model.opponentName === '') || model.gameOver) ? '' : 'Waiting for other player\'s move...')) : (model.gameOver ? '' : model.message),
+								gameOver: (elm$core$List$length(data.playerSunkShips) === 5) || (elm$core$List$length(data.opponentSunkShips) === 5),
+								message: model.changeMessage ? (data.isPlayerTurn ? 'Click on a square to select your target' : (((model.opponentName === '') || ((elm$core$List$length(data.playerSunkShips) === 5) || (elm$core$List$length(data.opponentSunkShips) === 5))) ? '' : 'Waiting for other player\'s move...')) : (model.gameOver ? '' : model.message),
 								refreshTimer: 360
 							}),
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
+					return A2(author$project$Main$handleError, model, error);
 				}
 			case 'GotSessionInfo':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
-					var _n5 = result.a;
-					var info = _n5.a;
-					var opponentName = _n5.b;
+					var _n4 = result.a;
+					var info = _n4.a;
+					var opponentName = _n4.b;
 					return _Utils_Tuple2(
 						_Utils_update(
 							model,
@@ -9763,9 +9761,7 @@ var author$project$Main$update = F2(
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
+					return A2(author$project$Main$handleError, model, error);
 				}
 			default:
 				var result = msg.a;
@@ -9787,7 +9783,7 @@ var author$project$Main$update = F2(
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
-									{changeMessage: false, gameOver: true, message: 'You win!'}),
+									{changeMessage: false, gameOver: true, gameState: author$project$Main$WaitingTurn, message: 'You win!'}),
 								elm$core$Platform$Cmd$batch(
 									_List_fromArray(
 										[
@@ -9810,14 +9806,12 @@ var author$project$Main$update = F2(
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
-									{changeMessage: true, message: other}),
+									{changeMessage: false, message: other}),
 								author$project$Main$getGameState(model.queries));
 					}
 				} else {
 					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
+					return A2(author$project$Main$handleError, model, error);
 				}
 		}
 	});
@@ -10523,6 +10517,7 @@ var author$project$Main$refreshGameButton = A2(
 			elm$html$Html$text('Refresh Game')
 		]));
 var author$project$Main$SendMove = {$: 'SendMove'};
+var elm$core$Basics$neq = _Utils_notEqual;
 var elm$html$Html$Attributes$disabled = elm$html$Html$Attributes$boolProperty('disabled');
 var author$project$Main$submitMoveButton = function (model) {
 	return A2(
@@ -10675,7 +10670,7 @@ var author$project$Main$mainScreen = function (model) {
 						MacCASOutreach$graphicsvg$GraphicSVG$size,
 						10,
 						MacCASOutreach$graphicsvg$GraphicSVG$text(
-							'Game will automatically refresh in ' + (elm$core$String$fromInt((model.refreshTimer / 60) | 0) + ' seconds'))))),
+							(!(model.gameData.isPlayerTurn || model.gameOver)) ? ('Game will automatically refresh in ' + (elm$core$String$fromInt((model.refreshTimer / 60) | 0) + ' seconds')) : '')))),
 				A2(
 				MacCASOutreach$graphicsvg$GraphicSVG$move,
 				A3(author$project$Main$locationFromSquare2, 0, 1, model.targetLocation),

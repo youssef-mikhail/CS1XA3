@@ -9415,9 +9415,7 @@ var author$project$Main$init = F3(
 	function (flags, url, key) {
 		return _Utils_Tuple2(
 			{
-				currentClick: _Utils_Tuple2(0, 0),
 				gameState: author$project$Main$Idle,
-				mouseLocation: _Utils_Tuple2(0, 0),
 				opponentName: '',
 				playerShips: _List_fromArray(
 					[
@@ -9544,7 +9542,6 @@ var author$project$Main$locationsForShip = function (ship) {
 		A2(elm$core$List$range, ship.location.a, ship.location.a + ship.size),
 		A2(elm$core$List$repeat, ship.size, ship.location.b));
 };
-var elm$core$Basics$neq = _Utils_notEqual;
 var author$project$Main$checkCollision = F2(
 	function (ship, ships) {
 		if (!ships.b) {
@@ -9552,10 +9549,10 @@ var author$project$Main$checkCollision = F2(
 		} else {
 			var a = ships.a;
 			var b = ships.b;
-			return (A2(
+			return A2(
 				author$project$Main$checkOverlap,
 				author$project$Main$locationsForShip(ship),
-				author$project$Main$locationsForShip(a)) && (!_Utils_eq(ship.location, a.location))) || A2(author$project$Main$checkCollision, ship, b);
+				author$project$Main$locationsForShip(a)) || A2(author$project$Main$checkCollision, ship, b);
 		}
 	});
 var elm$core$List$drop = F2(
@@ -9603,34 +9600,52 @@ var author$project$Main$getShipAt = F2(
 				0);
 		}
 	});
+var elm$browser$Browser$Navigation$load = _Browser_load;
 var author$project$Main$handleError = F2(
 	function (model, error) {
 		switch (error.$) {
 			case 'BadUrl':
 				var url = error.a;
-				return _Utils_update(
-					model,
-					{response: 'Error: Bad url (' + (url + ')')});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{response: 'Error: Bad url (' + (url + ')')}),
+					elm$core$Platform$Cmd$none);
 			case 'Timeout':
-				return _Utils_update(
-					model,
-					{response: 'Error: Request timed out'});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{response: 'Error: Request timed out'}),
+					elm$core$Platform$Cmd$none);
 			case 'NetworkError':
-				return _Utils_update(
-					model,
-					{response: 'Error: Network error'});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{response: 'Error: Network error'}),
+					elm$core$Platform$Cmd$none);
 			case 'BadStatus':
-				var status = error.a;
-				return _Utils_update(
-					model,
-					{
-						response: 'Error: Bad status ' + elm$core$String$fromInt(status)
-					});
+				var statusNum = error.a;
+				if (statusNum === 403) {
+					return _Utils_Tuple2(
+						model,
+						elm$browser$Browser$Navigation$load('login.html'));
+				} else {
+					var status = statusNum;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								response: 'Error: Bad status ' + elm$core$String$fromInt(status)
+							}),
+						elm$core$Platform$Cmd$none);
+				}
 			default:
 				var body = error.a;
-				return _Utils_update(
-					model,
-					{response: 'Bad body ' + body});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{response: 'Bad body ' + body}),
+					elm$core$Platform$Cmd$none);
 		}
 	});
 var elm$core$Basics$pi = _Basics_pi;
@@ -9716,7 +9731,7 @@ var author$project$Main$sendBoard = function (model) {
 				(model.queries === '') ? 'game/startgame/' : ('game/joingame/?' + model.queries))
 		});
 };
-var elm$browser$Browser$Navigation$load = _Browser_load;
+var elm$core$Basics$neq = _Utils_notEqual;
 var elm$core$List$takeReverse = F3(
 	function (n, list, kept) {
 		takeReverse:
@@ -9849,17 +9864,7 @@ var author$project$Main$update = F2(
 			case 'Tick':
 				var time = msg.a;
 				var getKeyState = msg.b;
-				return _Utils_Tuple2(
-					function () {
-						var _n1 = model.gameState;
-						if (_n1.$ === 'Idle') {
-							return model;
-						} else {
-							var ship = _n1.a;
-							return model;
-						}
-					}(),
-					elm$core$Platform$Cmd$none);
+				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 			case 'MakeRequest':
 				var urlRequest = msg.a;
 				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
@@ -9868,58 +9873,30 @@ var author$project$Main$update = F2(
 				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 			case 'SquareClicked':
 				var location = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{currentClick: location}),
-					elm$core$Platform$Cmd$none);
+				return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 			case 'SquareHovered':
 				var location = msg.a;
 				return _Utils_Tuple2(
 					function () {
-						var _n2 = model.gameState;
-						if (_n2.$ === 'Idle') {
+						var _n1 = model.gameState;
+						if (_n1.$ === 'Idle') {
 							return model;
 						} else {
-							var ship = _n2.a;
+							var ship = _n1.a;
 							return _Utils_update(
 								model,
 								{
 									playerShips: function () {
-										var newShip = (!A2(
-											author$project$Main$checkCollision,
-											A2(
-												author$project$Main$changeShipLocation,
-												A2(author$project$Main$getShipAt, ship, model.playerShips),
-												location),
-											_Utils_ap(
-												A2(elm$core$List$take, ship, model.playerShips),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)))) ? (((!A2(author$project$Main$getShipAt, ship, model.playerShips).orientation) && ((_Utils_cmp(
+										var wallShip = ((!A2(author$project$Main$getShipAt, ship, model.playerShips).orientation) && (_Utils_cmp(
 											location.b,
-											10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size) > 0) && (!A2(
-											author$project$Main$checkCollision,
-											A2(
-												author$project$Main$changeShipLocation,
-												A2(author$project$Main$getShipAt, ship, model.playerShips),
-												location),
-											_Utils_ap(
-												A2(elm$core$List$take, ship, model.playerShips),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)))))) ? A2(
+											10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size) > 0)) ? A2(
 											author$project$Main$changeShipLocation,
 											A2(author$project$Main$getShipAt, ship, model.playerShips),
 											_Utils_Tuple2(
 												location.a,
-												10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size)) : ((A2(author$project$Main$getShipAt, ship, model.playerShips).orientation && ((_Utils_cmp(
+												10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size)) : ((A2(author$project$Main$getShipAt, ship, model.playerShips).orientation && (_Utils_cmp(
 											location.a,
-											10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size) > 0) && (!A2(
-											author$project$Main$checkCollision,
-											A2(
-												author$project$Main$changeShipLocation,
-												A2(author$project$Main$getShipAt, ship, model.playerShips),
-												location),
-											_Utils_ap(
-												A2(elm$core$List$take, ship, model.playerShips),
-												A2(elm$core$List$drop, ship + 1, model.playerShips)))))) ? A2(
+											10 - A2(author$project$Main$getShipAt, ship, model.playerShips).size) > 0)) ? A2(
 											author$project$Main$changeShipLocation,
 											A2(author$project$Main$getShipAt, ship, model.playerShips),
 											_Utils_Tuple2(
@@ -9927,7 +9904,13 @@ var author$project$Main$update = F2(
 												location.b)) : A2(
 											author$project$Main$changeShipLocation,
 											A2(author$project$Main$getShipAt, ship, model.playerShips),
-											location))) : A2(author$project$Main$getShipAt, ship, model.playerShips);
+											location));
+										var newShip = (!A2(
+											author$project$Main$checkCollision,
+											wallShip,
+											_Utils_ap(
+												A2(elm$core$List$take, ship, model.playerShips),
+												A2(elm$core$List$drop, ship + 1, model.playerShips)))) ? wallShip : A2(author$project$Main$getShipAt, ship, model.playerShips);
 										return _Utils_ap(
 											A2(elm$core$List$take, ship, model.playerShips),
 											_Utils_ap(
@@ -9939,19 +9922,12 @@ var author$project$Main$update = F2(
 						}
 					}(),
 					elm$core$Platform$Cmd$none);
-			case 'MouseMoved':
-				var location = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{mouseLocation: location}),
-					elm$core$Platform$Cmd$none);
 			case 'EditShip':
 				var ship = msg.a;
 				return _Utils_Tuple2(
 					function () {
-						var _n3 = model.gameState;
-						if (_n3.$ === 'Idle') {
+						var _n2 = model.gameState;
+						if (_n2.$ === 'Idle') {
 							return _Utils_update(
 								model,
 								{
@@ -9967,11 +9943,11 @@ var author$project$Main$update = F2(
 			case 'RotateShip':
 				return _Utils_Tuple2(
 					function () {
-						var _n4 = model.gameState;
-						if (_n4.$ === 'Idle') {
+						var _n3 = model.gameState;
+						if (_n3.$ === 'Idle') {
 							return model;
 						} else {
-							var ship = _n4.a;
+							var ship = _n3.a;
 							return _Utils_update(
 								model,
 								{
@@ -9992,21 +9968,6 @@ var author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					model,
 					author$project$Main$sendBoard(model));
-			case 'GotResponse':
-				var result = msg.a;
-				if (result.$ === 'Ok') {
-					var val = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{response: val}),
-						elm$core$Platform$Cmd$none);
-				} else {
-					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
-				}
 			case 'GotSessionID':
 				var result = msg.a;
 				if (result.$ === 'Ok') {
@@ -10014,12 +9975,10 @@ var author$project$Main$update = F2(
 					return _Utils_Tuple2(
 						model,
 						elm$browser$Browser$Navigation$load(
-							author$project$Main$rootUrl + ('static/game.html?gameid=' + elm$core$String$fromInt(val))));
+							author$project$Main$rootUrl + ('game.html?gameid=' + elm$core$String$fromInt(val))));
 				} else {
 					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
+					return A2(author$project$Main$handleError, model, error);
 				}
 			default:
 				var result = msg.a;
@@ -10032,9 +9991,7 @@ var author$project$Main$update = F2(
 						elm$core$Platform$Cmd$none);
 				} else {
 					var error = result.a;
-					return _Utils_Tuple2(
-						A2(author$project$Main$handleError, model, error),
-						elm$core$Platform$Cmd$none);
+					return A2(author$project$Main$handleError, model, error);
 				}
 		}
 	});
@@ -10075,10 +10032,6 @@ var MacCASOutreach$graphicsvg$GraphicSVG$html = F3(
 	function (w, h, htm) {
 		return A3(MacCASOutreach$graphicsvg$GraphicSVG$ForeignObject, w, h, htm);
 	});
-var MacCASOutreach$graphicsvg$GraphicSVG$notifyMouseMoveAt = F2(
-	function (msg, shape) {
-		return A2(MacCASOutreach$graphicsvg$GraphicSVG$MoveOverAt, msg, shape);
-	});
 var MacCASOutreach$graphicsvg$GraphicSVG$size = F2(
 	function (sze, stencil) {
 		if (stencil.$ === 'Text') {
@@ -10108,9 +10061,6 @@ var MacCASOutreach$graphicsvg$GraphicSVG$text = function (str) {
 		MacCASOutreach$graphicsvg$GraphicSVG$Text,
 		A8(MacCASOutreach$graphicsvg$GraphicSVG$Face, 12, false, false, false, false, false, MacCASOutreach$graphicsvg$GraphicSVG$Serif, MacCASOutreach$graphicsvg$GraphicSVG$AlignLeft),
 		str);
-};
-var author$project$Main$MouseMoved = function (a) {
-	return {$: 'MouseMoved', a: a};
 };
 var MacCASOutreach$graphicsvg$GraphicSVG$lightBlue = A4(MacCASOutreach$graphicsvg$GraphicSVG$RGBA, 114, 159, 207, 1);
 var MacCASOutreach$graphicsvg$GraphicSVG$rectangle = F2(
@@ -10547,13 +10497,28 @@ var elm$html$Html$button = _VirtualDom_node('button');
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
 var elm$html$Html$Attributes$disabled = elm$html$Html$Attributes$boolProperty('disabled');
 var author$project$Main$rotateButton = function (model) {
+	var ship = function () {
+		var _n0 = model.gameState;
+		if (_n0.$ === 'MovingShip') {
+			var a = _n0.a;
+			return a;
+		} else {
+			return -1;
+		}
+	}();
 	return A2(
 		elm$html$Html$button,
 		_List_fromArray(
 			[
 				elm$html$Html$Events$onClick(author$project$Main$RotateShip),
 				elm$html$Html$Attributes$disabled(
-				_Utils_eq(model.gameState, author$project$Main$Idle))
+				_Utils_eq(model.gameState, author$project$Main$Idle) || (A2(
+					author$project$Main$checkCollision,
+					author$project$Main$rotateShip(
+						A2(author$project$Main$getShipAt, ship, model.playerShips)),
+					_Utils_ap(
+						A2(elm$core$List$take, ship, model.playerShips),
+						A2(elm$core$List$drop, ship + 1, model.playerShips))) && (!_Utils_eq(ship, -1))))
 			]),
 		_List_fromArray(
 			[
@@ -10575,7 +10540,6 @@ var author$project$Main$submitButton = function (model) {
 				elm$html$Html$text('Start Game')
 			]));
 };
-var elm$core$Debug$toString = _Debug_toString;
 var author$project$Main$mainScreen = function (model) {
 	return _List_fromArray(
 		[
@@ -10603,13 +10567,10 @@ var author$project$Main$mainScreen = function (model) {
 					15,
 					MacCASOutreach$graphicsvg$GraphicSVG$text(
 						_Utils_eq(model.gameState, author$project$Main$Idle) ? 'Click on a ship to move it' : 'Click on the square you would like to move your ship to')))),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$notifyMouseMoveAt,
-			author$project$Main$MouseMoved,
-			A2(MacCASOutreach$graphicsvg$GraphicSVG$move, author$project$Main$gridLocation, author$project$Main$gameGrid)),
+			A2(MacCASOutreach$graphicsvg$GraphicSVG$move, author$project$Main$gridLocation, author$project$Main$gameGrid),
 			A2(
 			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			_Utils_Tuple2(25, 125),
+			_Utils_Tuple2(0, 125),
 			A3(
 				MacCASOutreach$graphicsvg$GraphicSVG$html,
 				50,
@@ -10643,19 +10604,11 @@ var author$project$Main$mainScreen = function (model) {
 			A2(
 			MacCASOutreach$graphicsvg$GraphicSVG$filled,
 			MacCASOutreach$graphicsvg$GraphicSVG$black,
-			MacCASOutreach$graphicsvg$GraphicSVG$text(model.response)),
-			A2(
-			MacCASOutreach$graphicsvg$GraphicSVG$move,
-			_Utils_Tuple2(0, -100),
-			A2(
-				MacCASOutreach$graphicsvg$GraphicSVG$filled,
-				MacCASOutreach$graphicsvg$GraphicSVG$black,
-				MacCASOutreach$graphicsvg$GraphicSVG$text(
-					elm$core$Debug$toString(model.queries === ''))))
+			MacCASOutreach$graphicsvg$GraphicSVG$text(model.response))
 		]);
 };
 var author$project$Main$view = function (model) {
-	var title = 'Battleship Game';
+	var title = 'Battleship Game Creator';
 	var body = A3(
 		MacCASOutreach$graphicsvg$GraphicSVG$collage,
 		700,

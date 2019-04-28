@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseServerError, HttpResponseForbidden
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from .models import BattleshipSession
@@ -182,7 +182,7 @@ def updateGameState(request):
 def startgame(request):
     data = json.loads(request.body)
     if not request.user.is_authenticated:
-        return HttpResponse("Not logged in")
+        return HttpResponseForbidden("Not logged in")
     
     newSession = BattleshipSession.objects.create_session(request.user, data["ships"])
     newSession.save()
@@ -216,9 +216,8 @@ def getGames(request):
     
 def joinGame(request):
     if not request.user.is_authenticated:
-        return HttpResponse("Error: Not logged in. Please log in and try again")
+        return HttpResponseForbidden("Error: Not logged in. Please log in and try again")
     parameters = request.GET
-    postData = request.POST
     gameID = int(parameters.get("gameid", "0"))
     if gameID == 0:
         return HttpResponse("Error: Game ID not specified")
